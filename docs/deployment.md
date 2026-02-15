@@ -1,100 +1,58 @@
-# Deployment Environments
+# Development And Deployment Runbook
 
-## Environments
+## Project Decisions (Fixed)
 
-This project uses 3 environments.
+- Branch strategy: `feature/*` centric development.
+- DB switch timing: move from staging DB to production DB after delete feature is implemented.
+- Reason for switch timing: keep current trial data if it is usable.
+- Release timing: release is defined by domain setup completion.
 
-- `local`: local Next.js + local env file
-- `staging`: Vercel Preview + Supabase staging project
-- `production`: Vercel Production + Supabase production project
+## Current Phase
 
-## Supabase Project Split
+- Code branch in active use: `feature/*`
+- DB in active use: Supabase staging
+- Vercel env target: Preview/Production may temporarily point to staging until DB switch.
 
-Create 2 Supabase projects.
+## DB Switch Checklist (After Delete Feature)
 
-- `arrange-wiki-staging`
-- `arrange-wiki-production`
+1. Create production Supabase project.
+2. Apply migrations in `supabase/migrations/` to production DB.
+3. Set Vercel Production env vars to production DB values.
+4. Run smoke test on production URL.
+5. Keep staging DB for ongoing feature verification.
 
-Use separate database/auth for each project.
+## Environment Variables
 
-## Vercel Mapping
-
-- Vercel `Preview` environment -> `staging` Supabase
-- Vercel `Production` environment -> `production` Supabase
-
-## Required Environment Variables
+Required keys:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `DEMO_USER_ID` (optional for local/demo)
+- `DEMO_USER_ID` (optional)
 
-## Local Setup
+## Notes
 
-1. Copy `.env.local.example` to `.env.local`.
-2. Set local or staging Supabase variables.
-3. Run `npm run dev`.
+- Migration files are the source of truth for schema changes.
+- Even in feature-only flow, avoid ad-hoc SQL changes without migration files.
 
-## Staging Setup (Vercel)
+## CI/CD And Migration Automation
 
-1. Open Vercel project settings.
-2. Add `NEXT_PUBLIC_SUPABASE_URL` for `Preview`.
-3. Add `NEXT_PUBLIC_SUPABASE_ANON_KEY` for `Preview`.
-4. Redeploy preview.
+GitHub Actions workflows:
 
-## Production Setup (Vercel)
+- `.github/workflows/ci.yml`
+  - trigger: `pull_request`, `push(main)`
+  - runs: `npm ci`, `npm run build`
+- `.github/workflows/db-staging.yml`
+  - trigger: `push(main)` when `supabase/migrations/**` changed, or manual run
+  - runs: apply migrations to staging DB
+- `.github/workflows/db-production.yml`
+  - trigger: manual only (`workflow_dispatch`)
+  - guard: `confirm=apply` is required
+  - runs: apply migrations to production DB
 
-1. Open Vercel project settings.
-2. Add `NEXT_PUBLIC_SUPABASE_URL` for `Production`.
-3. Add `NEXT_PUBLIC_SUPABASE_ANON_KEY` for `Production`.
-4. Deploy to production branch.
+Required GitHub repository secrets:
 
-## Migration Policy
-
-Apply schema changes to `staging` first, verify, then apply to `production`.
-
-Recommended order:
-
-1. run migration on staging
-2. verify app on preview
-3. run same migration on production
-4. deploy production app
-
-## Initial DB Setup (No CLI)
-
-If Supabase CLI is not installed, run the migration SQL manually:
-
-1. Open Supabase Dashboard for `arrange-wiki-staging`.
-2. Go to SQL Editor.
-3. Paste and run `supabase/migrations/20260215_000001_init.sql`.
-4. Verify tables, view, and RLS policies are created.
-5. Repeat the same SQL for `arrange-wiki-production` after staging verification.
-
-## Initial DB Setup (With CLI, optional)
-
-If you install Supabase CLI later, use:
-
-```bash
-supabase link --project-ref <staging-project-ref>
-supabase db push
-```
-
-Then repeat for production project ref after validation.
-
-## Vercel Env Registration Checklist
-
-Preview (`staging`):
-
-- `NEXT_PUBLIC_SUPABASE_URL=<staging-url>`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY=<staging-anon-key>`
-- `DEMO_USER_ID=` (empty in staging recommended)
-
-Production:
-
-- `NEXT_PUBLIC_SUPABASE_URL=<production-url>`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY=<production-anon-key>`
-- `DEMO_USER_ID=` (empty in production)
-
-## Branch Policy
-
-- Feature branches -> Vercel Preview (`staging` resources)
-- Main branch -> Vercel Production (`production` resources)
+- `SUPABASE_ACCESS_TOKEN`
+- `SUPABASE_STAGING_PROJECT_REF`
+- `SUPABASE_STAGING_DB_PASSWORD`
+- `SUPABASE_PRODUCTION_PROJECT_REF`
+- `SUPABASE_PRODUCTION_DB_PASSWORD`
