@@ -1,56 +1,65 @@
-import Link from "next/link";
+import { ModePicker } from "@/components/mode-picker";
 import { PostCard } from "@/components/post-card";
-import { ScoreFilters } from "@/components/score-filters";
-import { ShareUrlButton } from "@/components/share-url-button";
-import { SortToggle } from "@/components/sort-toggle";
+import { ScorePicker } from "@/components/score-picker";
 import { listPosts } from "@/lib/repository";
-import { BullMode, OutRule, SortMode } from "@/lib/types/domain";
+import { BullMode, OutRule } from "@/lib/types/domain";
 
 interface PageProps {
   params: { remaining_score: string };
   searchParams: {
     out_rule?: string;
     bull_mode?: string;
-    sort?: string;
   };
 }
 
-const outRules: OutRule[] = ["double_out", "master_out", "single_out"];
-const bullModes: BullMode[] = ["separate", "fat"];
-const sortModes: SortMode[] = ["popular", "latest"];
+const outRuleOptions: Array<{ value: OutRule; label: string }> = [
+  { value: "double_out", label: "Double out" },
+  { value: "master_out", label: "Master out" },
+  { value: "single_out", label: "Single out" },
+];
+
+const bullModeOptions: Array<{ value: BullMode; label: string }> = [
+  { value: "separate", label: "Separate bull" },
+  { value: "fat", label: "Fat bull" },
+];
+
+function normalizeOutRule(value?: string): OutRule {
+  return outRuleOptions.some((option) => option.value === value) ? (value as OutRule) : "double_out";
+}
+
+function normalizeBullMode(value?: string): BullMode {
+  return bullModeOptions.some((option) => option.value === value) ? (value as BullMode) : "separate";
+}
 
 export default async function ScorePage({ params, searchParams }: PageProps) {
   const remainingScore = Number(params.remaining_score);
-  const outRule = outRules.includes(searchParams.out_rule as OutRule)
-    ? (searchParams.out_rule as OutRule)
-    : undefined;
-  const bullMode = bullModes.includes(searchParams.bull_mode as BullMode)
-    ? (searchParams.bull_mode as BullMode)
-    : undefined;
-  const sort = sortModes.includes(searchParams.sort as SortMode)
-    ? (searchParams.sort as SortMode)
-    : "popular";
+  const outRule = normalizeOutRule(searchParams.out_rule);
+  const bullMode = normalizeBullMode(searchParams.bull_mode);
 
-  const posts = await listPosts({ remainingScore, outRule, bullMode, sort });
+  const posts = await listPosts({ remainingScore, outRule, bullMode, sort: "latest" });
 
   return (
-    <section>
-      <div className="score-header">
-        <h1>{remainingScore} out option</h1>
-        <p>posts: {posts.length}</p>
-      </div>
+    <section className="mx-auto max-w-[760px] space-y-4 py-3">
+      <header className="score-page-header">
+        <div className="flex items-end gap-3">
+          <span className="pb-2 text-sm font-semibold text-[var(--color-text-secondary)]">Score</span>
+          <h1 className="m-0 leading-none">
+            <ScorePicker score={remainingScore} />
+          </h1>
+        </div>
+        <div className="pb-2">
+          <ModePicker score={remainingScore} outRule={outRule} bullMode={bullMode} />
+        </div>
+      </header>
 
-      <div className="toolbar">
-        <ScoreFilters />
-        <SortToggle />
-        <ShareUrlButton />
-        <Link href="/new">Post this score</Link>
-      </div>
-
-      <div className="posts-grid">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+      <div className="grid gap-3">
+        {posts.length > 0 ? (
+          posts.map((post) => <PostCard key={post.id} post={post} />)
+        ) : (
+          <p className="m-0 rounded-xl border border-[rgb(154_167_188_/_22%)] p-4 text-sm text-[var(--color-text-secondary)]">
+            No routes yet.
+          </p>
+        )}
       </div>
     </section>
   );

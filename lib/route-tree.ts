@@ -80,6 +80,8 @@ export function tokenScore(token: string) {
   if (d) return Number(d[1]) * 2;
   const t = token.match(/^T(\d{1,2})$/);
   if (t) return Number(t[1]) * 3;
+  const single = token.match(/^\d{1,2}$/);
+  if (single) return Number(single[0]);
   return 0;
 }
 

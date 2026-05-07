@@ -1,5 +1,6 @@
 "use client";
 
+import { UiSelect } from "@/components/ui/controls";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function ScoreFilters() {
@@ -19,23 +20,33 @@ export function ScoreFilters() {
   };
 
   return (
-    <div className="filters">
-      <label>
-        out_rule
-        <select value={outRule} onChange={(e) => setParam("out_rule", e.target.value)}>
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
+        <span>out</span>
+        <UiSelect
+          uiSize="compact"
+          value={outRule}
+          onChange={(e) => setParam("out_rule", e.target.value)}
+          className="min-w-28"
+        >
           <option value="">all</option>
           <option value="double_out">double_out</option>
           <option value="master_out">master_out</option>
           <option value="single_out">single_out</option>
-        </select>
+        </UiSelect>
       </label>
-      <label>
-        bull_mode
-        <select value={bullMode} onChange={(e) => setParam("bull_mode", e.target.value)}>
+      <label className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
+        <span>bull</span>
+        <UiSelect
+          uiSize="compact"
+          value={bullMode}
+          onChange={(e) => setParam("bull_mode", e.target.value)}
+          className="min-w-24"
+        >
           <option value="">all</option>
           <option value="separate">separate</option>
           <option value="fat">fat</option>
-        </select>
+        </UiSelect>
       </label>
     </div>
   );

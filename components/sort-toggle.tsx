@@ -1,5 +1,6 @@
 "use client";
 
+import { UiButton } from "@/components/ui/button";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function SortToggle() {
@@ -17,21 +18,23 @@ export function SortToggle() {
   };
 
   return (
-    <div className="sort-toggle">
-      <button
-        className={current === "popular" ? "active" : ""}
+    <div className="flex gap-2">
+      <UiButton
+        size="compact"
+        active={current === "popular"}
         onClick={() => setSort("popular")}
         type="button"
       >
         Popular
-      </button>
-      <button
-        className={current === "latest" ? "active" : ""}
+      </UiButton>
+      <UiButton
+        size="compact"
+        active={current === "latest"}
         onClick={() => setSort("latest")}
         type="button"
       >
         Latest
-      </button>
+      </UiButton>
     </div>
   );
 }

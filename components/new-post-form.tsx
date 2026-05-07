@@ -15,12 +15,15 @@ import { BullMode, OutRule, RouteTree } from "@/lib/types/domain";
 type Multiplier = "S" | "D" | "T";
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
+const DARTS_LEFT = 3;
+
+function numericOnly(value: string) {
+  return value.replace(/\D/g, "");
+}
 
 export function NewPostForm() {
   const [remainingScore, setRemainingScore] = useState(70);
   const [remainingScoreInput, setRemainingScoreInput] = useState("70");
-  const [dartsLeft, setDartsLeft] = useState(2);
-  const [dartsLeftInput, setDartsLeftInput] = useState("2");
   const [outRule, setOutRule] = useState<OutRule>("double_out");
   const [bullMode, setBullMode] = useState<BullMode>("separate");
   const [multiplier, setMultiplier] = useState<Multiplier>("T");
@@ -63,7 +66,7 @@ export function NewPostForm() {
   const selectedLabel = selectedNodeId === "target" ? `target: ${remainingScore}` : selectedNodeId;
   const selectedRemaining = getRemainingScoreAtNode(tree, remainingScore, selectedNodeId);
   const selectedThrowsUsed = getThrowsUsedAtNode(tree, selectedNodeId);
-  const canAddByThrows = selectedThrowsUsed < dartsLeft;
+  const canAddByThrows = selectedThrowsUsed < DARTS_LEFT;
   const canAddByScore = selectedRemaining > 0;
   const canAddToken = canAddByThrows && canAddByScore;
 
@@ -79,26 +82,20 @@ export function NewPostForm() {
     setSelectedNodeId("target");
   };
 
-  const commitDartsLeft = () => {
-    const parsed = Number(dartsLeftInput);
-    const safe = Number.isFinite(parsed) ? Math.max(1, Math.min(3, Math.trunc(parsed))) : 2;
-    setDartsLeft(safe);
-    setDartsLeftInput(String(safe));
-  };
-
   return (
     <form action={createPostAction} className="new-form">
+      <section className="new-form-section">
       <div className="new-form-grid">
-        <label>
-          remaining_score (1-701)
+        <label className="new-score-field">
+          Score 1-701
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             name="remaining_score"
-            min={1}
-            max={701}
             value={remainingScoreInput}
             onChange={(e) => {
-              const next = e.target.value;
+              const next = numericOnly(e.target.value);
               setRemainingScoreInput(next);
               const parsed = Number(next);
               if (Number.isFinite(parsed)) {
@@ -112,60 +109,41 @@ export function NewPostForm() {
           />
         </label>
 
-        <label>
-          darts_left (1-3)
-          <input
-            type="number"
-            name="darts_left"
-            min={1}
-            max={3}
-            value={dartsLeftInput}
-            onChange={(e) => {
-              const next = e.target.value;
-              setDartsLeftInput(next);
-              const parsed = Number(next);
-              if (Number.isFinite(parsed)) {
-                const safe = Math.max(1, Math.min(3, Math.trunc(parsed)));
-                setDartsLeft(safe);
-              }
-            }}
-            onBlur={commitDartsLeft}
-            required
-          />
-        </label>
+        <input type="hidden" name="darts_left" value={DARTS_LEFT} />
 
         <label>
-          out_rule
+          Out
           <select
             name="out_rule"
             value={outRule}
             onChange={(e) => setOutRule(e.target.value as OutRule)}
           >
-            <option value="double_out">double_out</option>
-            <option value="master_out">master_out</option>
-            <option value="single_out">single_out</option>
+            <option value="double_out">Double out</option>
+            <option value="master_out">Master out</option>
+            <option value="single_out">Single out</option>
           </select>
         </label>
 
         <label>
-          bull_mode
+          Bull
           <select
             name="bull_mode"
             value={bullMode}
             onChange={(e) => setBullMode(e.target.value as BullMode)}
           >
-            <option value="separate">separate</option>
-            <option value="fat">fat</option>
+            <option value="separate">Separate bull</option>
+            <option value="fat">Fat bull</option>
           </select>
         </label>
       </div>
+      </section>
 
       <input type="hidden" name="route_tree_json" value={JSON.stringify(tree)} />
 
-      <div className="tree-builder">
+      <section className="tree-builder">
         <div className="tree-builder-head">
-          <strong>Route Builder</strong>
-          <span>Selected: {selectedLabel}</span>
+          <strong>Route</strong>
+          <span>{selectedLabel}</span>
         </div>
 
         <RouteDiagram
@@ -177,26 +155,27 @@ export function NewPostForm() {
 
         <div className="builder-tools">
           <div className="token-row">
-            <span>nodes:</span>
-            <strong>{nodeCount}</strong>
-            <span>remaining:</span>
-            <strong>{selectedRemaining}</strong>
-            <span>throws used:</span>
-            <strong>
-              {selectedThrowsUsed}/{dartsLeft}
-            </strong>
+            <span>
+              Remaining <strong>{selectedRemaining}</strong>
+            </span>
+            <span>
+              Throw{" "}
+              <strong>
+                {selectedThrowsUsed}/{DARTS_LEFT}
+              </strong>
+            </span>
             <button type="button" onClick={removeSelected} disabled={selectedNodeId === "target"}>
-              Remove Selected
+              Remove
             </button>
             <button type="button" onClick={clearAll} disabled={nodeCount === 0}>
-              Clear All
+              Clear
             </button>
           </div>
 
           {guardMessage ? <p className="guard-message">{guardMessage}</p> : null}
 
           <div className="token-row">
-            <span>multiplier:</span>
+            <span>Target</span>
             {(["S", "D", "T"] as Multiplier[]).map((m) => (
               <button
                 key={m}
@@ -224,7 +203,7 @@ export function NewPostForm() {
           </div>
 
           <div className="token-row">
-            <span>bull:</span>
+            <span>Bull</span>
             {bullButtons.map((b) => (
               <button
                 key={b.token}
@@ -237,14 +216,14 @@ export function NewPostForm() {
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      <label>
-        comment (optional)
-        <textarea name="comment" rows={3} />
-      </label>
+      <details className="new-form-note">
+        <summary>Note</summary>
+        <textarea name="comment" rows={2} />
+      </details>
 
-      <button type="submit" disabled={nodeCount === 0}>
+      <button type="submit" className="new-form-submit" disabled={nodeCount === 0}>
         Save
       </button>
     </form>

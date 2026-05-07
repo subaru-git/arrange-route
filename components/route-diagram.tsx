@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { getRemainingScoreAtNode } from "@/lib/route-tree";
 import { RouteGraphNode, RouteTree } from "@/lib/types/domain";
 
-const NODE_W = 136;
-const NODE_H = 56;
-const X_GAP = 54;
-const Y_GAP = 84;
+const NODE_W = 52;
+const NODE_H = 52;
+const X_GAP = 34;
+const Y_GAP = 52;
 const PAD_X = 20;
 const PAD_Y = 16;
+const MIN_VISIBLE_COLS = 4;
 
 function linePath(from: RouteGraphNode, to: RouteGraphNode) {
   const sx = PAD_X + from.col * (NODE_W + X_GAP) + NODE_W;
@@ -47,6 +48,9 @@ export function RouteDiagram({
   onNodeClick?: (nodeId: string) => void;
 }) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const markerBaseId = useId().replace(/:/g, "");
+  const arrowMarkerId = `${markerBaseId}-route-arrow`;
+  const activeArrowMarkerId = `${markerBaseId}-route-arrow-active`;
 
   const nodeById = useMemo(() => new Map(tree.nodes.map((n) => [n.id, n])), [tree.nodes]);
 
@@ -60,7 +64,8 @@ export function RouteDiagram({
   const maxCol = useMemo(() => Math.max(...tree.nodes.map((n) => n.col)), [tree.nodes]);
   const maxRow = useMemo(() => Math.max(...tree.nodes.map((n) => n.row)), [tree.nodes]);
 
-  const width = PAD_X * 2 + (maxCol + 1) * NODE_W + maxCol * X_GAP;
+  const visibleCol = Math.max(maxCol, MIN_VISIBLE_COLS - 1);
+  const width = PAD_X * 2 + (visibleCol + 1) * NODE_W + visibleCol * X_GAP;
   const height = PAD_Y * 2 + (maxRow + 1) * NODE_H + maxRow * Y_GAP;
 
   const highlightedNodeIds = useMemo(() => {
@@ -87,7 +92,7 @@ export function RouteDiagram({
         <svg className="route-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
           <defs>
             <marker
-              id="route-arrow"
+              id={arrowMarkerId}
               markerWidth="10"
               markerHeight="8"
               refX="9"
@@ -95,10 +100,10 @@ export function RouteDiagram({
               orient="auto"
               markerUnits="userSpaceOnUse"
             >
-              <path d="M0,0 L10,4 L0,8 z" fill="#7a828a" />
+              <path d="M0,0 L10,4 L0,8 z" fill="var(--route-arrow-color, #7a828a)" />
             </marker>
             <marker
-              id="route-arrow-active"
+              id={activeArrowMarkerId}
               markerWidth="10"
               markerHeight="8"
               refX="9"
@@ -106,7 +111,7 @@ export function RouteDiagram({
               orient="auto"
               markerUnits="userSpaceOnUse"
             >
-              <path d="M0,0 L10,4 L0,8 z" fill="#58a6ff" />
+              <path d="M0,0 L10,4 L0,8 z" fill="var(--route-arrow-active-color, #58a6ff)" />
             </marker>
           </defs>
 
@@ -119,7 +124,7 @@ export function RouteDiagram({
                 key={`${e.from}->${e.to}`}
                 d={linePath(from, to)}
                 className="route-line"
-                markerEnd="url(#route-arrow)"
+                markerEnd={`url(#${arrowMarkerId})`}
               />
             );
           })}
@@ -133,7 +138,7 @@ export function RouteDiagram({
                 key={`${e.from}->${e.to}`}
                 d={linePath(from, to)}
                 className="route-line route-line-active"
-                markerEnd="url(#route-arrow-active)"
+                markerEnd={`url(#${activeArrowMarkerId})`}
               />
             );
           })}
@@ -144,7 +149,7 @@ export function RouteDiagram({
           const selected = selectedNodeId === n.id;
           const left = PAD_X + n.col * (NODE_W + X_GAP);
           const top = PAD_Y + n.row * (NODE_H + Y_GAP);
-          const label = n.id === tree.targetNodeId ? `target: ${target}` : n.token;
+          const label = n.id === tree.targetNodeId ? String(target) : n.token;
           const remaining = getRemainingScoreAtNode(tree, target, n.id);
           return (
             <button
@@ -163,6 +168,8 @@ export function RouteDiagram({
               onFocus={() => setHoveredNodeId(n.id)}
               onBlur={() => setHoveredNodeId(null)}
               onClick={() => onNodeClick?.(n.id)}
+              aria-label={`${label}, remaining ${remaining}`}
+              title={`${label} / remaining ${remaining}`}
             >
               <span className="route-node-remaining">{remaining}</span>
               {label}
