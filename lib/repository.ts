@@ -405,8 +405,11 @@ function sortPosts(items: PostCardItem[], sort: SortMode) {
 export async function listPosts(query: ScoreQuery): Promise<PostCardItem[]> {
   const sort = query.sort ?? "popular";
 
-  if (process.env.NODE_ENV === "development" || !hasSupabase) {
+  if (process.env.NODE_ENV === "development") {
     return listDemoPosts(query, sort);
+  }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
   }
 
   const supabase = getSupabaseClient();
@@ -497,7 +500,7 @@ export async function createPost(input: {
   routeTree: RouteTree;
   initialComment?: string;
 }) {
-  if (process.env.NODE_ENV === "development" || !hasSupabase) {
+  if (process.env.NODE_ENV === "development") {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
 
@@ -529,9 +532,14 @@ export async function createPost(input: {
 
     return { id };
   }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
 
   if (!hasSupabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required to save posts with the demo user");
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_KEY is required to save posts with the demo user"
+    );
   }
 
   const supabase = getSupabaseClient({ admin: true });
