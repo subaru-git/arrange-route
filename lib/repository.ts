@@ -531,7 +531,7 @@ export async function createPost(input: {
   }
 
   if (!hasSupabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to save posts with the demo user");
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required to save posts with the demo user");
   }
 
   const supabase = getSupabaseClient({ admin: true });

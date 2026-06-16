@@ -26,8 +26,8 @@
 Required keys:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only; required while demo-user posting is used)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY` (server-only; required while demo-user posting is used)
 - `DEMO_USER_ID` (optional)
 
 ## Notes
