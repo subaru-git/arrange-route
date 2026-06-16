@@ -3,9 +3,29 @@
 create extension if not exists pgcrypto;
 
 -- enums
-create type public.out_rule as enum ('double_out', 'master_out', 'single_out');
-create type public.bull_mode as enum ('separate', 'fat');
-create type public.vote_type as enum ('up', 'down');
+do $$
+begin
+  create type public.out_rule as enum ('double_out', 'master_out', 'single_out');
+exception
+  when duplicate_object then null;
+end;
+$$;
+
+do $$
+begin
+  create type public.bull_mode as enum ('separate', 'fat');
+exception
+  when duplicate_object then null;
+end;
+$$;
+
+do $$
+begin
+  create type public.vote_type as enum ('up', 'down');
+exception
+  when duplicate_object then null;
+end;
+$$;
 
 -- profiles
 create table if not exists public.profiles (
@@ -104,18 +124,22 @@ end;
 $$ language plpgsql;
 
 -- triggers
+drop trigger if exists trg_profiles_updated_at on public.profiles;
 create trigger trg_profiles_updated_at
 before update on public.profiles
 for each row execute procedure public.set_updated_at();
 
+drop trigger if exists trg_posts_updated_at on public.posts;
 create trigger trg_posts_updated_at
 before update on public.posts
 for each row execute procedure public.set_updated_at();
 
+drop trigger if exists trg_votes_updated_at on public.votes;
 create trigger trg_votes_updated_at
 before update on public.votes
 for each row execute procedure public.set_updated_at();
 
+drop trigger if exists trg_comments_updated_at on public.comments;
 create trigger trg_comments_updated_at
 before update on public.comments
 for each row execute procedure public.set_updated_at();
@@ -127,51 +151,62 @@ alter table public.votes enable row level security;
 alter table public.comments enable row level security;
 
 -- profiles policies
+drop policy if exists "profiles_select_all" on public.profiles;
 create policy "profiles_select_all"
 on public.profiles for select
 using (true);
 
+drop policy if exists "profiles_insert_own" on public.profiles;
 create policy "profiles_insert_own"
 on public.profiles for insert
 with check (auth.uid() = id);
 
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
 on public.profiles for update
 using (auth.uid() = id)
 with check (auth.uid() = id);
 
 -- posts policies
+drop policy if exists "posts_select_all" on public.posts;
 create policy "posts_select_all"
 on public.posts for select
 using (deleted_at is null);
 
+drop policy if exists "posts_insert_auth" on public.posts;
 create policy "posts_insert_auth"
 on public.posts for insert
 with check (auth.uid() = author_user_id);
 
+drop policy if exists "posts_update_own" on public.posts;
 create policy "posts_update_own"
 on public.posts for update
 using (auth.uid() = author_user_id)
 with check (auth.uid() = author_user_id);
 
 -- comments policies
+drop policy if exists "comments_select_all" on public.comments;
 create policy "comments_select_all"
 on public.comments for select
 using (deleted_at is null);
 
+drop policy if exists "comments_insert_auth" on public.comments;
 create policy "comments_insert_auth"
 on public.comments for insert
 with check (auth.uid() = author_user_id);
 
+drop policy if exists "comments_delete_own" on public.comments;
 create policy "comments_delete_own"
 on public.comments for delete
 using (auth.uid() = author_user_id);
 
 -- votes policies
+drop policy if exists "votes_select_all" on public.votes;
 create policy "votes_select_all"
 on public.votes for select
 using (true);
 
+drop policy if exists "votes_insert_auth" on public.votes;
 create policy "votes_insert_auth"
 on public.votes for insert
 with check (
@@ -180,6 +215,7 @@ with check (
   and browser_id is null
 );
 
+drop policy if exists "votes_insert_guest" on public.votes;
 create policy "votes_insert_guest"
 on public.votes for insert
 with check (
@@ -188,20 +224,24 @@ with check (
   and browser_id is not null
 );
 
+drop policy if exists "votes_update_auth" on public.votes;
 create policy "votes_update_auth"
 on public.votes for update
 using (auth.uid() is not null and user_id = auth.uid())
 with check (auth.uid() is not null and user_id = auth.uid());
 
+drop policy if exists "votes_update_guest" on public.votes;
 create policy "votes_update_guest"
 on public.votes for update
 using (auth.uid() is null and user_id is null and browser_id is not null)
 with check (auth.uid() is null and user_id is null and browser_id is not null);
 
+drop policy if exists "votes_delete_auth" on public.votes;
 create policy "votes_delete_auth"
 on public.votes for delete
 using (auth.uid() is not null and user_id = auth.uid());
 
+drop policy if exists "votes_delete_guest" on public.votes;
 create policy "votes_delete_guest"
 on public.votes for delete
 using (auth.uid() is null and user_id is null and browser_id is not null);
