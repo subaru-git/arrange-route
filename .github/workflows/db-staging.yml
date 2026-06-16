@@ -32,10 +32,10 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          if supabase migration list | grep -q '20260215'; then
+          if supabase migration list | grep -q '20260215000001'; then
             echo "Initial migration is already recorded."
           else
-            supabase migration repair --status applied 20260215
+            supabase migration repair --status applied 20260215000001
           fi
           supabase migration list
 
