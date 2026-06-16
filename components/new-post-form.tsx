@@ -6,26 +6,45 @@ import { RouteDiagram } from "@/components/route-diagram";
 import {
   addTokenToSelectedNode,
   createInitialRouteTree,
+  getNodeById,
+  getPathNodeIds,
   getRemainingScoreAtNode,
   getThrowsUsedAtNode,
   removeSelectedSubtree,
+  tokenScore,
 } from "@/lib/route-tree";
 import { BullMode, OutRule, RouteTree } from "@/lib/types/domain";
 
 type Multiplier = "S" | "D" | "T";
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
-const DARTS_LEFT = 3;
+const dartsLeftOptions = [1, 2, 3];
+const multiplierOptions: Array<{ value: Multiplier; label: string }> = [
+  { value: "S", label: "Single" },
+  { value: "D", label: "Double" },
+  { value: "T", label: "Triple" },
+];
 
 function numericOnly(value: string) {
   return value.replace(/\D/g, "");
 }
 
-export function NewPostForm() {
-  const [remainingScore, setRemainingScore] = useState(70);
-  const [remainingScoreInput, setRemainingScoreInput] = useState("70");
-  const [outRule, setOutRule] = useState<OutRule>("double_out");
-  const [bullMode, setBullMode] = useState<BullMode>("separate");
+interface NewPostFormProps {
+  initialRemainingScore?: number;
+  initialOutRule?: OutRule;
+  initialBullMode?: BullMode;
+}
+
+export function NewPostForm({
+  initialRemainingScore = 70,
+  initialOutRule = "double_out",
+  initialBullMode = "separate",
+}: NewPostFormProps) {
+  const [remainingScore, setRemainingScore] = useState(initialRemainingScore);
+  const [remainingScoreInput, setRemainingScoreInput] = useState(String(initialRemainingScore));
+  const [dartsLeft, setDartsLeft] = useState(3);
+  const [outRule, setOutRule] = useState<OutRule>(initialOutRule);
+  const [bullMode, setBullMode] = useState<BullMode>(initialBullMode);
   const [multiplier, setMultiplier] = useState<Multiplier>("T");
   const [tree, setTree] = useState<RouteTree>(() => createInitialRouteTree());
   const [selectedNodeId, setSelectedNodeId] = useState<string>("target");
@@ -63,16 +82,61 @@ export function NewPostForm() {
   };
 
   const nodeCount = tree.nodes.length - 1;
-  const selectedLabel = selectedNodeId === "target" ? `target: ${remainingScore}` : selectedNodeId;
+  const selectedNode = getNodeById(tree, selectedNodeId);
+  const selectedLabel =
+    selectedNodeId === "target" ? `Score ${remainingScore}` : (selectedNode?.token ?? "Route node");
   const selectedRemaining = getRemainingScoreAtNode(tree, remainingScore, selectedNodeId);
   const selectedThrowsUsed = getThrowsUsedAtNode(tree, selectedNodeId);
-  const canAddByThrows = selectedThrowsUsed < DARTS_LEFT;
+  const canAddByThrows = selectedThrowsUsed < dartsLeft;
   const canAddByScore = selectedRemaining > 0;
   const canAddToken = canAddByThrows && canAddByScore;
+  const childNodeIds = useMemo(() => new Set(tree.edges.map((edge) => edge.from)), [tree.edges]);
+  const leafNodes = useMemo(
+    () => tree.nodes.filter((node) => node.id !== tree.targetNodeId && !childNodeIds.has(node.id)),
+    [childNodeIds, tree.nodes, tree.targetNodeId]
+  );
+  const completeLeafCount = leafNodes.filter((node) => {
+    const remaining = getRemainingScoreAtNode(tree, remainingScore, node.id);
+    const throwsUsed = getThrowsUsedAtNode(tree, node.id);
+    return remaining >= 0 && (remaining === 0 || throwsUsed === dartsLeft);
+  }).length;
+  const routeSummaries = leafNodes
+    .slice()
+    .sort((a, b) => {
+      if (a.row !== b.row) return a.row - b.row;
+      return a.col - b.col;
+    })
+    .map((node, index) => {
+      const pathNodeIds = getPathNodeIds(tree, node.id).slice(1);
+      const tokens = pathNodeIds.map((id) => getNodeById(tree, id)?.token ?? "");
+      const remaining = remainingScore - tokens.reduce((acc, token) => acc + tokenScore(token), 0);
+      const complete = remaining >= 0 && (remaining === 0 || tokens.length >= dartsLeft);
+      const status = remaining < 0 ? "Bust" : complete ? "Done" : "Open";
+      return {
+        id: node.id,
+        index: index + 1,
+        label: tokens.join(" -> "),
+        remaining,
+        complete,
+        status,
+      };
+    });
+  const hasIncompleteLeaves = leafNodes.some((node) => {
+    const remaining = getRemainingScoreAtNode(tree, remainingScore, node.id);
+    const throwsUsed = getThrowsUsedAtNode(tree, node.id);
+    return remaining < 0 || (remaining !== 0 && throwsUsed < dartsLeft);
+  });
+  const canSubmit = nodeCount > 0 && !hasIncompleteLeaves;
+  const saveMessage =
+    nodeCount === 0
+      ? "Add at least one target to create a route."
+      : hasIncompleteLeaves
+        ? "Finish or remove open branches."
+        : "Ready to save.";
 
   let guardMessage = "";
   if (!canAddByScore) guardMessage = "Cannot add: remaining score is 0 or less.";
-  else if (!canAddByThrows) guardMessage = "Cannot add: darts_left limit reached.";
+  else if (!canAddByThrows) guardMessage = "Cannot add: darts limit reached.";
 
   const commitRemainingScore = () => {
     const parsed = Number(remainingScoreInput);
@@ -85,57 +149,68 @@ export function NewPostForm() {
   return (
     <form action={createPostAction} className="new-form">
       <section className="new-form-section">
-      <div className="new-form-grid">
-        <label className="new-score-field">
-          Score 1-701
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            name="remaining_score"
-            value={remainingScoreInput}
-            onChange={(e) => {
-              const next = numericOnly(e.target.value);
-              setRemainingScoreInput(next);
-              const parsed = Number(next);
-              if (Number.isFinite(parsed)) {
-                const safe = Math.max(1, Math.min(701, Math.trunc(parsed)));
-                setRemainingScore(safe);
-                setSelectedNodeId("target");
-              }
-            }}
-            onBlur={commitRemainingScore}
-            required
-          />
-        </label>
+        <div className="new-form-grid">
+          <label className="new-score-field">
+            Score 1-701
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              name="remaining_score"
+              value={remainingScoreInput}
+              onChange={(e) => {
+                const next = numericOnly(e.target.value);
+                setRemainingScoreInput(next);
+                const parsed = Number(next);
+                if (Number.isFinite(parsed)) {
+                  const safe = Math.max(1, Math.min(701, Math.trunc(parsed)));
+                  setRemainingScore(safe);
+                  setSelectedNodeId("target");
+                }
+              }}
+              onBlur={commitRemainingScore}
+              required
+            />
+          </label>
 
-        <input type="hidden" name="darts_left" value={DARTS_LEFT} />
+          <input type="hidden" name="darts_left" value={dartsLeft} />
 
-        <label>
-          Out
-          <select
-            name="out_rule"
-            value={outRule}
-            onChange={(e) => setOutRule(e.target.value as OutRule)}
-          >
-            <option value="double_out">Double out</option>
-            <option value="master_out">Master out</option>
-            <option value="single_out">Single out</option>
-          </select>
-        </label>
+          <label>
+            Darts
+            <select value={dartsLeft} onChange={(e) => setDartsLeft(Number(e.target.value))}>
+              {dartsLeftOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label>
-          Bull
-          <select
-            name="bull_mode"
-            value={bullMode}
-            onChange={(e) => setBullMode(e.target.value as BullMode)}
-          >
-            <option value="separate">Separate bull</option>
-            <option value="fat">Fat bull</option>
-          </select>
-        </label>
-      </div>
+          <label>
+            Out
+            <select
+              name="out_rule"
+              value={outRule}
+              onChange={(e) => setOutRule(e.target.value as OutRule)}
+            >
+              <option value="double_out">Double out</option>
+              <option value="master_out">Master out</option>
+              <option value="single_out">Single out</option>
+            </select>
+          </label>
+
+          <label>
+            Bull
+            <select
+              name="bull_mode"
+              value={bullMode}
+              onChange={(e) => setBullMode(e.target.value as BullMode)}
+            >
+              <option value="separate">Separate bull</option>
+              <option value="fat">Fat bull</option>
+            </select>
+          </label>
+        </div>
       </section>
 
       <input type="hidden" name="route_tree_json" value={JSON.stringify(tree)} />
@@ -143,7 +218,6 @@ export function NewPostForm() {
       <section className="tree-builder">
         <div className="tree-builder-head">
           <strong>Route</strong>
-          <span>{selectedLabel}</span>
         </div>
 
         <RouteDiagram
@@ -154,38 +228,50 @@ export function NewPostForm() {
         />
 
         <div className="builder-tools">
-          <div className="token-row">
-            <span>
-              Remaining <strong>{selectedRemaining}</strong>
-            </span>
-            <span>
-              Throw{" "}
+          <div className="route-status-grid">
+            <div>
+              <span>Remaining</span>
+              <strong>{selectedRemaining}</strong>
+            </div>
+            <div>
+              <span>Throw</span>
               <strong>
-                {selectedThrowsUsed}/{DARTS_LEFT}
+                {selectedThrowsUsed}/{dartsLeft}
               </strong>
-            </span>
+            </div>
+            <div>
+              <span>Routes</span>
+              <strong>
+                {completeLeafCount}/{Math.max(leafNodes.length, 1)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="route-actions">
             <button type="button" onClick={removeSelected} disabled={selectedNodeId === "target"}>
-              Remove
+              Remove selected
             </button>
             <button type="button" onClick={clearAll} disabled={nodeCount === 0}>
-              Clear
+              Clear route
             </button>
           </div>
 
           {guardMessage ? <p className="guard-message">{guardMessage}</p> : null}
 
-          <div className="token-row">
-            <span>Target</span>
-            {(["S", "D", "T"] as Multiplier[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={multiplier === m ? "active" : ""}
-                onClick={() => setMultiplier(m)}
-              >
-                {m}
-              </button>
-            ))}
+          <div className="target-toolbar">
+            <span>Aim for</span>
+            <div className="multiplier-segment">
+              {multiplierOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={multiplier === option.value ? "active" : ""}
+                  onClick={() => setMultiplier(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="token-grid">
@@ -202,8 +288,7 @@ export function NewPostForm() {
             ))}
           </div>
 
-          <div className="token-row">
-            <span>Bull</span>
+          <div className="bull-targets">
             {bullButtons.map((b) => (
               <button
                 key={b.token}
@@ -218,12 +303,38 @@ export function NewPostForm() {
         </div>
       </section>
 
+      {routeSummaries.length > 0 ? (
+        <section className="route-summary" aria-label="Route summary">
+          {routeSummaries.map((route) => (
+            <button
+              key={route.id}
+              type="button"
+              className={[
+                "route-summary-item",
+                route.complete ? "complete" : "",
+                route.status === "Bust" ? "bust" : "",
+                selectedNodeId === route.id ? "selected" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setSelectedNodeId(route.id)}
+            >
+              <span className="route-summary-index">Route {route.index}</span>
+              <span className="route-summary-path">{route.label}</span>
+              <span className="route-summary-status">{route.status}</span>
+              <strong>{route.remaining}</strong>
+            </button>
+          ))}
+        </section>
+      ) : null}
+
       <details className="new-form-note">
         <summary>Note</summary>
         <textarea name="comment" rows={2} />
       </details>
 
-      <button type="submit" className="new-form-submit" disabled={nodeCount === 0}>
+      <p className={canSubmit ? "save-status ready" : "save-status"}>{saveMessage}</p>
+      <button type="submit" className="new-form-submit" disabled={!canSubmit}>
         Save
       </button>
     </form>

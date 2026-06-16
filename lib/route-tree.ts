@@ -118,28 +118,74 @@ export function getRemainingScoreAtNode(tree: RouteTree, targetScore: number, no
   return targetScore - sum;
 }
 
+export function layoutRouteTree(tree: RouteTree): RouteTree {
+  const nodeById = new Map(tree.nodes.map((node) => [node.id, node]));
+  const childrenByNode = new Map<string, string[]>();
+  tree.edges.forEach((edge) => {
+    const children = childrenByNode.get(edge.from) ?? [];
+    children.push(edge.to);
+    childrenByNode.set(edge.from, children);
+  });
+
+  const layout = new Map<string, { col: number; row: number }>();
+  let nextLeafRow = 0;
+
+  function place(nodeId: string, col: number): { firstRow: number; lastRow: number } {
+    const node = nodeById.get(nodeId);
+    if (!node) return { firstRow: nextLeafRow, lastRow: nextLeafRow };
+
+    const children = (childrenByNode.get(nodeId) ?? []).filter((childId) => nodeById.has(childId));
+    if (children.length === 0) {
+      const row = nextLeafRow;
+      nextLeafRow += 1;
+      layout.set(nodeId, { col, row });
+      return { firstRow: row, lastRow: row };
+    }
+
+    let firstRow = 0;
+    let lastRow = 0;
+    children.forEach((childId, index) => {
+      const childSpan = place(childId, col + 1);
+      if (index === 0) firstRow = childSpan.firstRow;
+      lastRow = childSpan.lastRow;
+    });
+
+    layout.set(nodeId, { col, row: firstRow });
+    return { firstRow, lastRow };
+  }
+
+  place(tree.targetNodeId, 0);
+
+  return {
+    ...tree,
+    nodes: tree.nodes.map((node) => {
+      const position = layout.get(node.id);
+      return position ? { ...node, ...position } : node;
+    }),
+  };
+}
+
 export function addTokenToSelectedNode(tree: RouteTree, selectedNodeId: string, token: string) {
   const selected = getNodeById(tree, selectedNodeId);
   if (!selected) return { tree, selectedNodeId: tree.targetNodeId };
 
   const nextCol = selected.col + 1;
-  const candidates = tree.nodes.filter((n) => n.col === nextCol && n.row >= selected.row);
-  const nextRow = candidates.length === 0 ? selected.row : Math.max(...candidates.map((n) => n.row)) + 1;
-
   const newId = `n-${crypto.randomUUID()}`;
   const newNode: RouteGraphNode = {
     id: newId,
     token,
     col: nextCol,
-    row: nextRow,
+    row: selected.row,
   };
 
+  const nextTree = layoutRouteTree({
+    ...tree,
+    nodes: [...tree.nodes, newNode],
+    edges: [...tree.edges, { from: selectedNodeId, to: newId }],
+  });
+
   return {
-    tree: {
-      ...tree,
-      nodes: [...tree.nodes, newNode],
-      edges: [...tree.edges, { from: selectedNodeId, to: newId }],
-    },
+    tree: nextTree,
     selectedNodeId: newId,
   };
 }
@@ -167,11 +213,11 @@ export function removeSelectedSubtree(tree: RouteTree, selectedNodeId: string) {
   const fallback = parentEdge?.from ?? tree.targetNodeId;
 
   return {
-    tree: {
+    tree: layoutRouteTree({
       ...tree,
       nodes: tree.nodes.filter((n) => !toDelete.has(n.id)),
       edges: tree.edges.filter((e) => !toDelete.has(e.from) && !toDelete.has(e.to)),
-    },
+    }),
     selectedNodeId: fallback,
   };
 }

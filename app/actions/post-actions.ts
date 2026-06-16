@@ -61,7 +61,7 @@ export async function createPostAction(formData: FormData) {
     initialComment: comment || undefined,
   });
 
-  redirect(`/scores/${remainingScore}`);
+  redirect(`/scores/${remainingScore}?out_rule=${outRule}&bull_mode=${bullMode}`);
 }
 
 export async function voteAction(formData: FormData) {

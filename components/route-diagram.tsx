@@ -11,19 +11,33 @@ const Y_GAP = 52;
 const PAD_X = 20;
 const PAD_Y = 16;
 const MIN_VISIBLE_COLS = 4;
+const BRANCH_STUB = 18;
 
-function linePath(from: RouteGraphNode, to: RouteGraphNode) {
+function getEdgePoints(from: RouteGraphNode, to: RouteGraphNode) {
   const sx = PAD_X + from.col * (NODE_W + X_GAP) + NODE_W;
   const sy = PAD_Y + from.row * (NODE_H + Y_GAP) + NODE_H / 2;
   const tx = PAD_X + to.col * (NODE_W + X_GAP);
   const ty = PAD_Y + to.row * (NODE_H + Y_GAP) + NODE_H / 2;
+  const elbowX = sx + Math.min(BRANCH_STUB, Math.max(8, (tx - sx) - 12));
+
+  return { sx, sy, tx, ty, elbowX };
+}
+
+function trunkPath(from: RouteGraphNode, to: RouteGraphNode) {
+  const { sx, sy, elbowX } = getEdgePoints(from, to);
+  return `M ${sx} ${sy} L ${elbowX} ${sy}`;
+}
+
+function linePath(from: RouteGraphNode, to: RouteGraphNode, hasSharedTrunk: boolean) {
+  const { sx, sy, tx, ty, elbowX } = getEdgePoints(from, to);
 
   if (sy === ty) {
-    return `M ${sx} ${sy} L ${tx} ${ty}`;
+    return hasSharedTrunk ? `M ${elbowX} ${sy} L ${tx} ${ty}` : `M ${sx} ${sy} L ${tx} ${ty}`;
   }
 
-  const mx = sx + (tx - sx) / 2;
-  return `M ${sx} ${sy} L ${mx} ${sy} L ${mx} ${ty} L ${tx} ${ty}`;
+  return hasSharedTrunk
+    ? `M ${elbowX} ${sy} L ${elbowX} ${ty} L ${tx} ${ty}`
+    : `M ${sx} ${sy} L ${elbowX} ${sy} L ${elbowX} ${ty} L ${tx} ${ty}`;
 }
 
 function collectPathNodes(nodeId: string, parentByNode: Map<string, string | null>) {
@@ -61,6 +75,16 @@ export function RouteDiagram({
     return m;
   }, [tree.nodes, tree.edges]);
 
+  const childrenByNode = useMemo(() => {
+    const m = new Map<string, string[]>();
+    tree.edges.forEach((e) => {
+      const children = m.get(e.from) ?? [];
+      children.push(e.to);
+      m.set(e.from, children);
+    });
+    return m;
+  }, [tree.edges]);
+
   const maxCol = useMemo(() => Math.max(...tree.nodes.map((n) => n.col)), [tree.nodes]);
   const maxRow = useMemo(() => Math.max(...tree.nodes.map((n) => n.row)), [tree.nodes]);
 
@@ -85,9 +109,12 @@ export function RouteDiagram({
 
   const inactiveEdges = tree.edges.filter((e) => !highlightedEdgeIds.has(`${e.from}->${e.to}`));
   const activeEdges = tree.edges.filter((e) => highlightedEdgeIds.has(`${e.from}->${e.to}`));
+  const branchTrunks = [...childrenByNode.entries()].filter(([, children]) => children.length > 1);
+
+  const isEmpty = tree.nodes.length === 1;
 
   return (
-    <div className="route-diagram">
+    <div className={isEmpty ? "route-diagram route-diagram-empty" : "route-diagram"}>
       <div className="route-canvas" style={{ width, height }}>
         <svg className="route-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
           <defs>
@@ -115,14 +142,29 @@ export function RouteDiagram({
             </marker>
           </defs>
 
+          {branchTrunks.map(([fromId, children]) => {
+            const from = nodeById.get(fromId);
+            const to = nodeById.get(children[0]);
+            if (!from || !to) return null;
+            const active = children.some((childId) => highlightedEdgeIds.has(`${fromId}->${childId}`));
+            return (
+              <path
+                key={`${fromId}->trunk`}
+                d={trunkPath(from, to)}
+                className={active ? "route-line route-line-active" : "route-line"}
+              />
+            );
+          })}
+
           {inactiveEdges.map((e) => {
             const from = nodeById.get(e.from);
             const to = nodeById.get(e.to);
             if (!from || !to) return null;
+            const hasSharedTrunk = (childrenByNode.get(e.from)?.length ?? 0) > 1;
             return (
               <path
                 key={`${e.from}->${e.to}`}
-                d={linePath(from, to)}
+                d={linePath(from, to, hasSharedTrunk)}
                 className="route-line"
                 markerEnd={`url(#${arrowMarkerId})`}
               />
@@ -133,10 +175,11 @@ export function RouteDiagram({
             const from = nodeById.get(e.from);
             const to = nodeById.get(e.to);
             if (!from || !to) return null;
+            const hasSharedTrunk = (childrenByNode.get(e.from)?.length ?? 0) > 1;
             return (
               <path
                 key={`${e.from}->${e.to}`}
-                d={linePath(from, to)}
+                d={linePath(from, to, hasSharedTrunk)}
                 className="route-line route-line-active"
                 markerEnd={`url(#${activeArrowMarkerId})`}
               />

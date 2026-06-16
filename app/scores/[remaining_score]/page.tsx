@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ModePicker } from "@/components/mode-picker";
 import { PostCard } from "@/components/post-card";
 import { ScorePicker } from "@/components/score-picker";
@@ -31,6 +32,15 @@ function normalizeBullMode(value?: string): BullMode {
   return bullModeOptions.some((option) => option.value === value) ? (value as BullMode) : "separate";
 }
 
+function newRouteHref(remainingScore: number, outRule: OutRule, bullMode: BullMode) {
+  const params = new URLSearchParams({
+    remaining_score: String(remainingScore),
+    out_rule: outRule,
+    bull_mode: bullMode,
+  });
+  return `/new?${params.toString()}`;
+}
+
 export default async function ScorePage({ params, searchParams }: PageProps) {
   const remainingScore = Number(params.remaining_score);
   const outRule = normalizeOutRule(searchParams.out_rule);
@@ -57,7 +67,10 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
           posts.map((post) => <PostCard key={post.id} post={post} />)
         ) : (
           <p className="m-0 rounded-xl border border-[rgb(154_167_188_/_22%)] p-4 text-sm text-[var(--color-text-secondary)]">
-            No routes yet.
+            No routes yet.{" "}
+            <Link href={newRouteHref(remainingScore, outRule, bullMode)} className="new-route-link">
+              Add a route
+            </Link>
           </p>
         )}
       </div>

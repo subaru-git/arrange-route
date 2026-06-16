@@ -35,10 +35,17 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
   const [score, setScore] = useState("");
   const [outRule, setOutRule] = useState<OutRule>("double_out");
   const [bullMode, setBullMode] = useState<BullMode>("separate");
+  const nextScore = clampScore(Number(score));
+  const newPostHref = nextScore
+    ? `/new?${new URLSearchParams({
+        remaining_score: String(nextScore),
+        out_rule: outRule,
+        bull_mode: bullMode,
+      }).toString()}`
+    : "/new";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextScore = clampScore(Number(score));
     if (!nextScore) return;
     router.push(scoreHref(nextScore, outRule, bullMode));
   }
@@ -98,6 +105,9 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
             </Link>
           ))}
         </div>
+        <p className="score-entry-secondary">
+          Know a route? <Link href={newPostHref}>Add it to the wiki</Link>
+        </p>
       </section>
     </div>
   );

@@ -125,6 +125,18 @@ a:hover {
   width: 100%;
 }
 
+.new-route-link {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(127 141 166 / 42%);
+  text-underline-offset: 3px;
+}
+
+.new-route-link:hover {
+  text-decoration-color: var(--color-line-active);
+}
+
 .score-entry form {
   display: grid;
   gap: 12px;
@@ -213,6 +225,23 @@ a:hover {
   color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 700;
+}
+
+.score-entry-recommend .score-entry-secondary {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.score-entry-secondary a {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(127 141 166 / 42%);
+  text-underline-offset: 3px;
+}
+
+.score-entry-secondary a:hover {
+  text-decoration-color: var(--color-line-active);
 }
 
 .score-entry-shortcuts {
@@ -799,7 +828,7 @@ button {
 
 .new-form-grid {
   display: grid;
-  grid-template-columns: 76px 1fr 1fr;
+  grid-template-columns: 76px 72px 1fr 1fr;
   gap: 6px;
   align-items: end;
 }
@@ -857,10 +886,6 @@ button {
 }
 
 .tree-builder-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
   margin-bottom: 4px;
   color: var(--color-text-secondary);
   font-size: 12px;
@@ -868,17 +893,68 @@ button {
 
 .tree-builder-head strong {
   color: var(--color-text-primary);
-  font-size: 14px;
+  font-size: 18px;
+  line-height: 1.1;
 }
 
 .builder-tools {
-  margin-top: 8px;
+  margin-top: 10px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .guard-message {
   margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.route-status-grid div {
+  min-width: 0;
+  min-height: 54px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  border: 1px solid rgb(154 167 188 / 22%);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 8px 10px;
+}
+
+.route-status-grid span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-status-grid strong {
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.route-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.route-actions button {
+  min-height: 36px;
+  border-radius: 999px;
   color: var(--color-text-secondary);
   font-size: 12px;
 }
@@ -892,13 +968,51 @@ button {
   font-size: 12px;
 }
 
+.target-toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.multiplier-segment {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 3px;
+  border: 1px solid rgb(154 167 188 / 26%);
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.multiplier-segment button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.multiplier-segment button.active {
+  background: var(--color-surface-control-1);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 0 0 1px rgb(127 141 166 / 52%);
+}
+
 .token-row strong {
   color: var(--color-text-primary);
 }
 
 .token-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
   gap: 5px;
 }
 
@@ -922,8 +1036,26 @@ button {
   min-height: 34px;
   border-radius: 10px;
   background: var(--color-surface-node-0);
-  font-size: 13px;
+  font-size: 16px;
   padding: 0;
+}
+
+.bull-targets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.bull-targets button {
+  min-height: 40px;
+  border-radius: 12px;
+  background: var(--color-surface-node-0);
+  font-size: 14px;
+  padding: 0 8px;
+}
+
+.bull-targets button:only-child {
+  grid-column: 1 / -1;
 }
 
 .builder-tools button:disabled {
@@ -936,6 +1068,10 @@ button {
   box-shadow: none;
 }
 
+.route-diagram-empty .route-canvas {
+  height: 98px !important;
+}
+
 .new-form-submit {
   min-height: 40px;
   border: 1px solid var(--color-line-active);
@@ -943,6 +1079,86 @@ button {
   box-shadow: none;
   color: var(--color-text-primary);
   font-weight: 700;
+}
+
+.new-form-submit:disabled {
+  opacity: 0.45;
+}
+
+.save-status {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.save-status.ready {
+  color: var(--color-text-primary);
+}
+
+.route-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.route-summary-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid rgb(154 167 188 / 24%);
+  background: #ffffff;
+  box-shadow: none;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.route-summary-path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-summary-index,
+.route-summary-status {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.route-summary-status {
+  min-width: 36px;
+  text-align: center;
+}
+
+.route-summary-item strong {
+  min-width: 30px;
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.route-summary-item.complete {
+  border-color: rgb(127 141 166 / 48%);
+  background: var(--color-surface-node-0);
+  color: var(--color-text-primary);
+}
+
+.route-summary-item.selected {
+  border-color: var(--color-line-active);
+  box-shadow: 0 0 0 2px rgb(127 141 166 / 14%);
+}
+
+.route-summary-item.bust {
+  border-color: rgb(154 167 188 / 42%);
+  background: #ffffff;
 }
 
 .new-form-note {
@@ -993,6 +1209,6 @@ button {
   }
 
   .token-grid {
-    grid-template-columns: repeat(4, minmax(52px, 1fr));
+    grid-template-columns: repeat(5, minmax(44px, 1fr));
   }
 }

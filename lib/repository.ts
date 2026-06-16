@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { normalizeRouteTree } from "@/lib/route-tree";
-import { getSupabaseClient, hasSupabase } from "@/lib/supabase/client";
+import { getSupabaseClient, hasSupabase, hasSupabaseAdmin } from "@/lib/supabase/client";
 import {
   BullMode,
   CommentItem,
@@ -497,9 +497,50 @@ export async function createPost(input: {
   routeTree: RouteTree;
   initialComment?: string;
 }) {
-  if (!hasSupabase) return { id: randomUUID() };
+  if (process.env.NODE_ENV === "development" || !hasSupabase) {
+    const id = randomUUID();
+    const createdAt = new Date().toISOString();
 
-  const supabase = getSupabaseClient();
+    demoPosts.unshift({
+      id,
+      remainingScore: input.remainingScore,
+      dartsLeft: input.dartsLeft,
+      outRule: input.outRule,
+      bullMode: input.bullMode,
+      routeTree: input.routeTree,
+      voteScore: 0,
+      upCount: 0,
+      downCount: 0,
+      commentCount: input.initialComment?.trim() ? 1 : 0,
+      comments: input.initialComment?.trim()
+        ? [
+            {
+              id: randomUUID(),
+              postId: id,
+              body: input.initialComment.trim(),
+              authorName: "demo_user",
+              createdAt,
+            },
+          ]
+        : [],
+      authorName: "demo_user",
+      createdAt,
+    });
+
+    return { id };
+  }
+
+  if (!hasSupabaseAdmin) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to save posts with the demo user");
+  }
+
+  const supabase = getSupabaseClient({ admin: true });
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: input.authorUserId,
+    display_name: "demo_user",
+  });
+  if (profileError) throw profileError;
+
   const { data, error } = await supabase
     .from("posts")
     .insert({
@@ -601,7 +642,14 @@ export async function createComment(input: {
   body: string;
 }) {
   if (!hasSupabase) return;
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient({ admin: hasSupabaseAdmin });
+  if (hasSupabaseAdmin) {
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: input.authorUserId,
+      display_name: "demo_user",
+    });
+    if (profileError) throw profileError;
+  }
   const { error } = await supabase.from("comments").insert({
     post_id: input.postId,
     author_user_id: input.authorUserId,
