@@ -41,12 +41,17 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
         run: |
           set -o pipefail
-          supabase migration repair 20260215000001 --status applied 2>&1 | tee supabase-repair.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            message=$(tr '\n' ' ' < supabase-repair.log)
-            echo "::error title=Supabase migration repair failed::$message"
-            exit "$status"
+          supabase migration list 2>&1 | tee supabase-migrations-before.log
+          if grep -q '20260215000001.*│.*20260215000001' supabase-migrations-before.log; then
+            echo "Initial migration is already recorded remotely."
+          else
+            supabase migration repair 20260215000001 --status applied 2>&1 | tee supabase-repair.log
+            status=${PIPESTATUS[0]}
+            if [ "$status" -ne 0 ]; then
+              message=$(tr '\n' ' ' < supabase-repair.log)
+              echo "::error title=Supabase migration repair failed::$message"
+              exit "$status"
+            fi
           fi
           supabase migration list
 
