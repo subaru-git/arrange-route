@@ -240,38 +240,8 @@ export function NewPostForm({
         />
 
         <div className="builder-tools">
-          <div className="route-status-grid">
-            <div>
-              <span>Remaining</span>
-              <strong>{selectedRemaining}</strong>
-            </div>
-            <div>
-              <span>Throw</span>
-              <strong>
-                {selectedThrowsUsed}/{dartsLeft}
-              </strong>
-            </div>
-            <div>
-              <span>Routes</span>
-              <strong>
-                {completeLeafCount}/{Math.max(leafNodes.length, 1)}
-              </strong>
-            </div>
-          </div>
-
-          <div className="route-actions">
-            <button type="button" onClick={removeSelected} disabled={selectedNodeId === "target"}>
-              Remove selected
-            </button>
-            <button type="button" onClick={clearAll} disabled={nodeCount === 0}>
-              Clear route
-            </button>
-          </div>
-
-          {guardMessage ? <p className="guard-message">{guardMessage}</p> : null}
-
           <div className="target-toolbar">
-            <span>Add throw</span>
+            <span>Add</span>
             <div className="multiplier-segment">
               {multiplierOptions.map((option) => (
                 <button
@@ -312,6 +282,36 @@ export function NewPostForm({
               </button>
             ))}
           </div>
+
+          <div className="route-status-grid">
+            <div>
+              <span>Remaining</span>
+              <strong>{selectedRemaining}</strong>
+            </div>
+            <div>
+              <span>Throw</span>
+              <strong>
+                {selectedThrowsUsed}/{dartsLeft}
+              </strong>
+            </div>
+            <div>
+              <span>Routes</span>
+              <strong>
+                {completeLeafCount}/{Math.max(leafNodes.length, 1)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="route-actions">
+            <button type="button" onClick={removeSelected} disabled={selectedNodeId === "target"}>
+              Remove selected
+            </button>
+            <button type="button" onClick={clearAll} disabled={nodeCount === 0}>
+              Clear route
+            </button>
+          </div>
+
+          {guardMessage ? <p className="guard-message">{guardMessage}</p> : null}
         </div>
       </section>
 
