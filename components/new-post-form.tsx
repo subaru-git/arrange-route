@@ -63,13 +63,6 @@ export function NewPostForm({
     ];
   }, [bullMode, outRule]);
 
-  const addToken = (token: string) => {
-    if (!canAddToken) return;
-    const next = addTokenToSelectedNode(tree, selectedNodeId, token);
-    setTree(next.tree);
-    setSelectedNodeId(next.selectedNodeId);
-  };
-
   const removeSelected = () => {
     const next = removeSelectedSubtree(tree, selectedNodeId);
     setTree(next.tree);
@@ -89,7 +82,17 @@ export function NewPostForm({
   const selectedThrowsUsed = getThrowsUsedAtNode(tree, selectedNodeId);
   const canAddByThrows = selectedThrowsUsed < dartsLeft;
   const canAddByScore = selectedRemaining > 0;
-  const canAddToken = canAddByThrows && canAddByScore;
+  const canAddToSelected = canAddByThrows && canAddByScore;
+  const canAddFromTarget = remainingScore > 0 && dartsLeft > 0;
+  const canAddToken = canAddToSelected || canAddFromTarget;
+
+  const addToken = (token: string) => {
+    if (!canAddToken) return;
+    const sourceNodeId = canAddToSelected ? selectedNodeId : tree.targetNodeId;
+    const next = addTokenToSelectedNode(tree, sourceNodeId, token);
+    setTree(next.tree);
+    setSelectedNodeId(next.selectedNodeId);
+  };
   const childNodeIds = useMemo(() => new Set(tree.edges.map((edge) => edge.from)), [tree.edges]);
   const leafNodes = useMemo(
     () => tree.nodes.filter((node) => node.id !== tree.targetNodeId && !childNodeIds.has(node.id)),
@@ -134,8 +137,7 @@ export function NewPostForm({
         : "Ready to save.";
 
   let guardMessage = "";
-  if (!canAddByScore) guardMessage = "Cannot add: remaining score is 0 or less.";
-  else if (!canAddByThrows) guardMessage = "Cannot add: darts limit reached.";
+  if (!canAddFromTarget) guardMessage = "Cannot add: remaining score is 0 or less.";
 
   const commitRemainingScore = () => {
     const parsed = Number(remainingScoreInput);
