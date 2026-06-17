@@ -121,17 +121,16 @@ export function NewPostForm({
         status,
       };
     });
-  const hasIncompleteLeaves = leafNodes.some((node) => {
+  const hasBustedLeaves = leafNodes.some((node) => {
     const remaining = getRemainingScoreAtNode(tree, remainingScore, node.id);
-    const throwsUsed = getThrowsUsedAtNode(tree, node.id);
-    return remaining < 0 || (remaining !== 0 && throwsUsed < dartsLeft);
+    return remaining < 0;
   });
-  const canSubmit = nodeCount > 0 && !hasIncompleteLeaves;
+  const canSubmit = nodeCount > 0 && !hasBustedLeaves;
   const saveMessage =
     nodeCount === 0
       ? "Add at least one target to create a route."
-      : hasIncompleteLeaves
-        ? "Finish or remove open branches."
+      : hasBustedLeaves
+        ? "Remove busted routes."
         : "Ready to save.";
 
   let guardMessage = "";
