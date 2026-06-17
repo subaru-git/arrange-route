@@ -377,6 +377,7 @@ button {
 }
 
 .post-delete-trigger {
+  appearance: none;
   position: absolute;
   top: 13px;
   right: 13px;
@@ -388,15 +389,21 @@ button {
   height: 18px;
   padding: 0;
   border: 0;
+  border-radius: 0;
   background: transparent;
+  box-shadow: none;
   color: rgb(88 103 129 / 28%);
   cursor: pointer;
-  transition: color 0.15s ease;
+  filter: none;
+  transition: color 0.15s ease, filter 0.15s ease;
 }
 
 .post-delete-trigger:hover,
 .post-delete-trigger:focus-visible {
   color: rgb(88 103 129 / 62%);
+  background: transparent;
+  box-shadow: none;
+  filter: none;
   outline: none;
 }
 
