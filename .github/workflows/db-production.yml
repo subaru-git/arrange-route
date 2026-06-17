@@ -24,11 +24,47 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
         run: |
+          set -o pipefail
           supabase link \
             --project-ref "${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}" \
-            --password "$SUPABASE_DB_PASSWORD"
+            --password "$SUPABASE_DB_PASSWORD" 2>&1 | tee supabase-link.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(tr '\n' ' ' < supabase-link.log)
+            echo "::error title=Supabase link failed::$message"
+            exit "$status"
+          fi
+
+      - name: Repair manually initialized migration history
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+        run: |
+          set -o pipefail
+          supabase migration list 2>&1 | tee supabase-migrations-before.log
+          if grep -q '20260215000001.*│.*20260215000001' supabase-migrations-before.log; then
+            echo "Initial migration is already recorded remotely."
+          else
+            supabase migration repair 20260215000001 --status applied 2>&1 | tee supabase-repair.log
+            status=${PIPESTATUS[0]}
+            if [ "$status" -ne 0 ]; then
+              message=$(tr '\n' ' ' < supabase-repair.log)
+              echo "::error title=Supabase migration repair failed::$message"
+              exit "$status"
+            fi
+          fi
+          supabase migration list
 
       - name: Push migrations to production
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase db push
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+        run: |
+          set -o pipefail
+          supabase db push 2>&1 | tee supabase-db-push.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            message=$(tr '\n' ' ' < supabase-db-push.log)
+            echo "::error title=Supabase db push failed::$message"
+            exit "$status"
+          fi
