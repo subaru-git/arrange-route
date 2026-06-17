@@ -8,10 +8,10 @@ export function PostCard({ post }: { post: PostCardItem }) {
 
   return (
     <article className="post-card">
-      <div className="post-card-toolbar">
+      <div className="post-card-route">
+        <RouteDiagram target={post.remainingScore} tree={tree} />
         <DeletePostControl postId={post.id} remainingScore={post.remainingScore} />
       </div>
-      <RouteDiagram target={post.remainingScore} tree={tree} />
     </article>
   );
 }
