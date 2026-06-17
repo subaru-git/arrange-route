@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { createPostAction } from "@/app/actions/post-actions";
 import { RouteDiagram } from "@/components/route-diagram";
 import {
@@ -27,6 +28,16 @@ const multiplierOptions: Array<{ value: Multiplier; label: string }> = [
 
 function numericOnly(value: string) {
   return value.replace(/\D/g, "");
+}
+
+function SaveSubmitButton({ canSubmit }: { canSubmit: boolean }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button type="submit" className="new-form-submit" disabled={!canSubmit || pending}>
+      {pending ? "Saving" : "Save"}
+    </button>
+  );
 }
 
 interface NewPostFormProps {
@@ -84,7 +95,7 @@ export function NewPostForm({
   const canAddByScore = selectedRemaining > 0;
   const canAddToSelected = canAddByThrows && canAddByScore;
   const canAddFromTarget = remainingScore > 0 && dartsLeft > 0;
-  const canAddToken = canAddToSelected || canAddFromTarget;
+  const canAddToken = canAddFromTarget;
 
   const addToken = (token: string) => {
     if (!canAddToken) return;
@@ -260,7 +271,7 @@ export function NewPostForm({
           {guardMessage ? <p className="guard-message">{guardMessage}</p> : null}
 
           <div className="target-toolbar">
-            <span>Aim for</span>
+            <span>Add throw</span>
             <div className="multiplier-segment">
               {multiplierOptions.map((option) => (
                 <button
@@ -335,9 +346,7 @@ export function NewPostForm({
       </details>
 
       <p className={canSubmit ? "save-status ready" : "save-status"}>{saveMessage}</p>
-      <button type="submit" className="new-form-submit" disabled={!canSubmit}>
-        Save
-      </button>
+      <SaveSubmitButton canSubmit={canSubmit} />
     </form>
   );
 }
