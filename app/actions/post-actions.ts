@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -78,6 +79,8 @@ export async function createPostAction(formData: FormData) {
     initialComment: comment || undefined,
   });
 
+  revalidatePath("/scores");
+  revalidatePath(`/scores/${remainingScore}`);
   redirect(`/scores/${remainingScore}?out_rule=${outRule}&bull_mode=${bullMode}`);
 }
 

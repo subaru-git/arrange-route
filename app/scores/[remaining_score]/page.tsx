@@ -5,6 +5,8 @@ import { ScorePicker } from "@/components/score-picker";
 import { listPosts } from "@/lib/repository";
 import { BullMode, OutRule } from "@/lib/types/domain";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: { remaining_score: string };
   searchParams: {
