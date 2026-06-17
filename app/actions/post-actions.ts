@@ -39,6 +39,17 @@ function getDemoUserId() {
   return process.env.DEMO_USER_ID ?? "00000000-0000-0000-0000-000000000001";
 }
 
+function getJapanDatePasswordPrefix(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}${values.month}${values.day}`;
+}
+
 export async function createPostAction(formData: FormData) {
   const remainingScore = Number(formData.get("remaining_score"));
   const dartsLeft = Number(formData.get("darts_left"));
@@ -75,22 +86,23 @@ export async function deletePostAction(
   formData: FormData
 ): Promise<DeletePostActionState> {
   const postId = String(formData.get("post_id") ?? "");
+  const remainingScore = Number(formData.get("remaining_score"));
   const password = String(formData.get("password") ?? "");
-  const adminPassword = process.env.ADMIN_DELETE_PASSWORD;
+  const deletePassword = `${getJapanDatePasswordPrefix()}${remainingScore}`;
 
   if (!postId) {
     return { ok: false, message: "Post is missing." };
   }
 
-  if (!adminPassword) {
-    return { ok: false, message: "Delete password is not configured." };
+  if (!Number.isInteger(remainingScore) || remainingScore < 2 || remainingScore > 180) {
+    return { ok: false, message: "Score is invalid." };
   }
 
-  if (password !== adminPassword) {
+  if (password !== deletePassword) {
     return { ok: false, message: "Password is incorrect." };
   }
 
-  await deletePost({ postId });
+  await deletePost({ postId, remainingScore });
   return { ok: true };
 }
 

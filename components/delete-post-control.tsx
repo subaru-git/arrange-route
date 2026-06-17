@@ -17,7 +17,13 @@ function DeleteSubmitButton() {
   );
 }
 
-export function DeletePostControl({ postId }: { postId: string }) {
+export function DeletePostControl({
+  postId,
+  remainingScore,
+}: {
+  postId: string;
+  remainingScore: number;
+}) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -55,9 +61,10 @@ export function DeletePostControl({ postId }: { postId: string }) {
       >
         <form action={formAction} className="delete-modal-panel">
           <input type="hidden" name="post_id" value={postId} />
+          <input type="hidden" name="remaining_score" value={remainingScore} />
           <div className="delete-modal-copy">
             <h2 id={`delete-title-${postId}`}>Delete route</h2>
-            <p>This route will disappear from the score list.</p>
+            <p>Enter today's date followed by {remainingScore}.</p>
           </div>
           <label className="delete-password-field">
             <span>Password</span>

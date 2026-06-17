@@ -576,9 +576,11 @@ export async function createPost(input: {
   return data;
 }
 
-export async function deletePost(input: { postId: string }) {
+export async function deletePost(input: { postId: string; remainingScore: number }) {
   if (process.env.NODE_ENV === "development") {
-    const index = demoPosts.findIndex((post) => post.id === input.postId);
+    const index = demoPosts.findIndex(
+      (post) => post.id === input.postId && post.remainingScore === input.remainingScore
+    );
     if (index >= 0) demoPosts.splice(index, 1);
     return;
   }
@@ -598,6 +600,7 @@ export async function deletePost(input: { postId: string }) {
     .from("posts")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", input.postId)
+    .eq("remaining_score", input.remainingScore)
     .is("deleted_at", null);
 
   if (error) throw error;
