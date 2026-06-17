@@ -50,15 +50,18 @@ a:hover {
 
 .app-header {
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 14px 12px 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: rgb(154 167 188 / 30%);
 }
 
 .app-header-title {
   color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.2;
   text-decoration: none;
 }
 
@@ -83,37 +86,16 @@ a:hover {
 
 .scores-entry-page {
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 18px;
-  min-height: calc(100dvh - 24px);
+  min-height: calc(100dvh - 68px);
   padding-top: 0;
   min-width: 0;
   width: 100%;
-}
-
-.scores-entry-page header {
-  display: grid;
-  gap: 4px;
 }
 
 .scores-entry-main {
   display: grid;
   align-content: center;
   min-height: 0;
-}
-
-.scores-entry-page header p {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.scores-entry-page header h1 {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: 32px;
-  line-height: 1;
 }
 
 .score-entry {
@@ -936,15 +918,8 @@ button {
   padding: 4px 0 12px;
 }
 
-.new-post-page header p {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .new-post-page header h1 {
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--color-text-primary);
   font-size: 22px;
   line-height: 1;

@@ -30,7 +30,6 @@ export default function NewPage({ searchParams }: PageProps) {
   return (
     <section className="new-post-page">
       <header>
-        <p>Arrange Wiki</p>
         <h1>New route</h1>
       </header>
       <NewPostForm
