@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   createComment,
   createPost,
+  deletePost,
   deleteVote,
   upsertVote,
 } from "@/lib/repository";
@@ -13,6 +14,11 @@ import { BullMode, OutRule, RouteTree } from "@/lib/types/domain";
 
 const BROWSER_ID_KEY = "arrange_browser_id";
 const BROWSER_ID_AGE = 60 * 60 * 24 * 365;
+
+export type DeletePostActionState = {
+  ok: boolean;
+  message?: string;
+};
 
 function getOrCreateBrowserId() {
   const store = cookies();
@@ -62,6 +68,30 @@ export async function createPostAction(formData: FormData) {
   });
 
   redirect(`/scores/${remainingScore}?out_rule=${outRule}&bull_mode=${bullMode}`);
+}
+
+export async function deletePostAction(
+  _prevState: DeletePostActionState,
+  formData: FormData
+): Promise<DeletePostActionState> {
+  const postId = String(formData.get("post_id") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const adminPassword = process.env.ADMIN_DELETE_PASSWORD;
+
+  if (!postId) {
+    return { ok: false, message: "Post is missing." };
+  }
+
+  if (!adminPassword) {
+    return { ok: false, message: "Delete password is not configured." };
+  }
+
+  if (password !== adminPassword) {
+    return { ok: false, message: "Password is incorrect." };
+  }
+
+  await deletePost({ postId });
+  return { ok: true };
 }
 
 export async function voteAction(formData: FormData) {

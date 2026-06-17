@@ -576,6 +576,33 @@ export async function createPost(input: {
   return data;
 }
 
+export async function deletePost(input: { postId: string }) {
+  if (process.env.NODE_ENV === "development") {
+    const index = demoPosts.findIndex((post) => post.id === input.postId);
+    if (index >= 0) demoPosts.splice(index, 1);
+    return;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  if (!hasSupabaseAdmin) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_KEY is required to delete posts"
+    );
+  }
+
+  const supabase = getSupabaseClient({ admin: true });
+  const { error } = await supabase
+    .from("posts")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", input.postId)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+}
+
 export async function upsertVote(input: {
   postId: string;
   voteType: "up" | "down";

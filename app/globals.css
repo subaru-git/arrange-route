@@ -370,13 +370,133 @@ button {
 
 .post-card {
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 10px;
+  gap: 8px;
+}
+
+.post-card-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 28px;
+}
+
+.post-delete-trigger {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.post-delete-trigger:hover {
+  color: var(--color-text-primary);
+}
+
+.delete-modal {
+  width: min(360px, calc(100vw - 32px));
+  border: 1px solid rgb(154 167 188 / 24%);
+  border-radius: 10px;
+  padding: 0;
+  color: var(--color-text-primary);
+  background: var(--color-surface-shell-0);
+  box-shadow: 0 18px 38px var(--elevation-3);
+}
+
+.delete-modal::backdrop {
+  background: rgb(82 96 120 / 22%);
+}
+
+.delete-modal-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.delete-modal-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.delete-modal-copy h2,
+.delete-modal-copy p,
+.delete-modal-error {
+  margin: 0;
+}
+
+.delete-modal-copy h2 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.delete-modal-copy p {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.delete-password-field {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.delete-password-field input {
+  width: 100%;
+  border: 1px solid rgb(154 167 188 / 34%);
+  border-radius: 8px;
   padding: 10px;
-  border-radius: 16px;
-  border-top: 0;
-  background: linear-gradient(180deg, var(--color-surface-shell-0) 0%, var(--color-surface-shell-1) 100%);
-  box-shadow: 0 10px 18px var(--elevation-2);
+  color: var(--color-text-primary);
+  background: var(--color-surface-control-0);
+  font: inherit;
+  font-size: 14px;
+}
+
+.delete-password-field input:focus {
+  outline: 1px solid var(--color-line-active);
+}
+
+.delete-modal-error {
+  color: #a14141;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-modal-cancel,
+.delete-modal-confirm {
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-modal-cancel {
+  border: 1px solid rgb(154 167 188 / 26%);
+  color: var(--color-text-primary);
+  background: var(--color-surface-control-0);
+}
+
+.delete-modal-confirm {
+  border: 1px solid rgb(161 65 65 / 26%);
+  color: #a14141;
+  background: #fff7f7;
+}
+
+.delete-modal-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .vote-rail {
