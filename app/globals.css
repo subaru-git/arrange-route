@@ -48,24 +48,22 @@ a:hover {
   text-decoration: none;
 }
 
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+.app-header {
   display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 12px;
-  background: linear-gradient(180deg, var(--color-surface-shell-0) 0%, var(--color-surface-shell-1) 100%);
-  box-shadow: 0 8px 16px -14px var(--elevation-2);
+  justify-content: center;
+  padding: 14px 12px 4px;
 }
 
-.site-header a {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, var(--color-surface-control-0) 0%, var(--color-surface-control-1) 100%);
-  box-shadow: 0 4px 10px var(--elevation-1);
-  font-size: 14px;
+.app-header-title {
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.app-header-title:hover {
+  filter: brightness(0.92);
 }
 
 .container {

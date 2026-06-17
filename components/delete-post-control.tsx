@@ -73,7 +73,6 @@ export function DeletePostControl({
           <input type="hidden" name="remaining_score" value={remainingScore} />
           <div className="delete-modal-copy">
             <h2 id={`delete-title-${postId}`}>Delete route</h2>
-            <p>Enter today's date followed by {remainingScore}.</p>
           </div>
           <label className="delete-password-field">
             <span>Password</span>
