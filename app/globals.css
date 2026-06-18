@@ -84,6 +84,11 @@ a:hover {
   justify-content: space-between;
 }
 
+.score-page-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .scores-entry-page {
   display: grid;
   min-height: calc(100dvh - 68px);
