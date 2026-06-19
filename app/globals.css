@@ -54,7 +54,7 @@ a:hover {
   justify-content: center;
   min-height: 44px;
   padding: 0 12px;
-  background: rgb(154 167 188 / 30%);
+  background: rgb(154 167 188 / 0.1);
 }
 
 .app-header-title {
