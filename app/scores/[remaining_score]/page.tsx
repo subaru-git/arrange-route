@@ -64,18 +64,15 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
         </div>
       </header>
 
-      <div className="score-page-actions">
-        <Link href={newRouteHref(remainingScore, outRule, bullMode)} className="new-route-link">
-          Add a route
-        </Link>
-      </div>
-
       <div className="grid gap-3">
-        {posts.length > 0 ? (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
-        ) : (
-          <p className="m-0 p-4 text-sm text-[var(--color-text-secondary)]">No routes yet.</p>
-        )}
+        {posts.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
+        <p className="m-0 p-4 text-sm text-[var(--color-text-secondary)]">
+          <Link href={newRouteHref(remainingScore, outRule, bullMode)} className="new-route-link">
+            Add a route
+          </Link>
+        </p>
       </div>
     </section>
   );

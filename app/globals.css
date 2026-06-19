@@ -84,11 +84,6 @@ a:hover {
   justify-content: space-between;
 }
 
-.score-page-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .scores-entry-page {
   display: grid;
   min-height: calc(100dvh - 68px);
@@ -112,7 +107,7 @@ a:hover {
 
 .new-route-link {
   color: var(--color-text-primary);
-  font-weight: 700;
+  font-weight: inherit;
   text-decoration: underline;
   text-decoration-color: rgb(127 141 166 / 42%);
   text-underline-offset: 3px;
