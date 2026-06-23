@@ -94,15 +94,15 @@ export async function deletePostAction(
   const deletePassword = `${getJapanDatePasswordPrefix()}${remainingScore}`;
 
   if (!postId) {
-    return { ok: false, message: "Post is missing." };
+    return { ok: false, message: "投稿が見つかりません。" };
   }
 
   if (!Number.isInteger(remainingScore) || remainingScore < 2 || remainingScore > 180) {
-    return { ok: false, message: "Score is invalid." };
+    return { ok: false, message: "スコアが正しくありません。" };
   }
 
   if (password !== deletePassword) {
-    return { ok: false, message: "Password is incorrect." };
+    return { ok: false, message: "パスワードが違います。" };
   }
 
   await deletePost({ postId, remainingScore });

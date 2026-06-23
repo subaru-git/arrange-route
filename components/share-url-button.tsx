@@ -17,7 +17,7 @@ export function ShareUrlButton({ className }: ShareUrlButtonProps) {
         await navigator.clipboard.writeText(window.location.href);
       }}
     >
-      Copy URL
+      URLをコピー
     </UiButton>
   );
 }

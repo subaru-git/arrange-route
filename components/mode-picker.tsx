@@ -5,14 +5,14 @@ import { useState } from "react";
 import { BullMode, OutRule } from "@/lib/types/domain";
 
 const outRuleOptions: Array<{ value: OutRule; label: string }> = [
-  { value: "double_out", label: "Double out" },
-  { value: "master_out", label: "Master out" },
-  { value: "single_out", label: "Single out" },
+  { value: "double_out", label: "ダブルアウト" },
+  { value: "master_out", label: "マスターアウト" },
+  { value: "single_out", label: "シングルアウト" },
 ];
 
 const bullModeOptions: Array<{ value: BullMode; label: string }> = [
-  { value: "separate", label: "Separate bull" },
-  { value: "fat", label: "Fat bull" },
+  { value: "separate", label: "セパレートブル" },
+  { value: "fat", label: "ファットブル" },
 ];
 
 function modeHref(score: number, outRule: OutRule, bullMode: BullMode) {
@@ -21,11 +21,11 @@ function modeHref(score: number, outRule: OutRule, bullMode: BullMode) {
 }
 
 export function getOutRuleLabel(value: OutRule) {
-  return outRuleOptions.find((option) => option.value === value)?.label ?? "Double out";
+  return outRuleOptions.find((option) => option.value === value)?.label ?? "ダブルアウト";
 }
 
 export function getBullModeLabel(value: BullMode) {
-  return bullModeOptions.find((option) => option.value === value)?.label ?? "Separate bull";
+  return bullModeOptions.find((option) => option.value === value)?.label ?? "セパレートブル";
 }
 
 export function ModePicker({
@@ -68,18 +68,18 @@ export function ModePicker({
             className="mode-picker-sheet"
             role="dialog"
             aria-modal="true"
-            aria-label="Score mode"
+            aria-label="ゲーム設定"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mode-picker-head">
-              <p>Mode</p>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close mode picker">
-                Close
+              <p>ゲーム設定</p>
+              <button type="button" onClick={() => setOpen(false)} aria-label="ゲーム設定を閉じる">
+                閉じる
               </button>
             </div>
 
             <div className="mode-picker-group">
-              <p>Out rule</p>
+              <p>アウトルール</p>
               <div>
                 {outRuleOptions.map((option) => {
                   const active = option.value === draftOutRule;
@@ -98,7 +98,7 @@ export function ModePicker({
             </div>
 
             <div className="mode-picker-group">
-              <p>Bull mode</p>
+              <p>ブル</p>
               <div>
                 {bullModeOptions.map((option) => {
                   const active = option.value === draftBullMode;
@@ -118,10 +118,10 @@ export function ModePicker({
 
             <div className="mode-picker-actions">
               <button type="button" onClick={() => setOpen(false)}>
-                Cancel
+                キャンセル
               </button>
               <button type="button" className="primary" onClick={applyMode}>
-                Apply
+                この設定で見る
               </button>
             </div>
           </section>

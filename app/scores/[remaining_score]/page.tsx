@@ -54,7 +54,7 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
     <section className="mx-auto max-w-[760px] space-y-4 py-3">
       <header className="score-page-header">
         <div className="flex items-end gap-3">
-          <span className="pb-2 text-sm font-semibold text-[var(--color-text-secondary)]">Score</span>
+          <span className="pb-2 text-sm font-semibold text-[var(--color-text-secondary)]">残り</span>
           <h1 className="m-0 leading-none">
             <ScorePicker score={remainingScore} />
           </h1>
@@ -70,7 +70,7 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
         ))}
         <p className="m-0 p-4 text-sm text-[var(--color-text-secondary)]">
           <Link href={newRouteHref(remainingScore, outRule, bullMode)} className="new-route-link">
-            Add a route
+            この点数のアレンジを追加
           </Link>
         </p>
       </div>

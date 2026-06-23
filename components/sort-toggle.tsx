@@ -25,7 +25,7 @@ export function SortToggle() {
         onClick={() => setSort("popular")}
         type="button"
       >
-        Popular
+        人気順
       </UiButton>
       <UiButton
         size="compact"
@@ -33,7 +33,7 @@ export function SortToggle() {
         onClick={() => setSort("latest")}
         type="button"
       >
-        Latest
+        新着順
       </UiButton>
     </div>
   );

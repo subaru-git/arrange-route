@@ -12,7 +12,7 @@ function DeleteSubmitButton() {
 
   return (
     <button type="submit" className="delete-modal-confirm" disabled={pending}>
-      {pending ? "Deleting" : "Delete"}
+      {pending ? "削除中…" : "削除する"}
     </button>
   );
 }
@@ -53,8 +53,8 @@ export function DeletePostControl({
         type="button"
         className="post-delete-trigger"
         onClick={() => setOpen(true)}
-        aria-label="Delete route"
-        title="Delete route"
+        aria-label="アレンジを削除"
+        title="アレンジを削除"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="post-delete-icon">
           <path d="M9 3h6l1 2h4v2H4V5h4l1-2Z" />
@@ -72,16 +72,16 @@ export function DeletePostControl({
           <input type="hidden" name="post_id" value={postId} />
           <input type="hidden" name="remaining_score" value={remainingScore} />
           <div className="delete-modal-copy">
-            <h2 id={`delete-title-${postId}`}>Delete route</h2>
+            <h2 id={`delete-title-${postId}`}>アレンジを削除</h2>
           </div>
           <label className="delete-password-field">
-            <span>Password</span>
+            <span>削除パスワード</span>
             <input name="password" type="password" autoComplete="current-password" autoFocus />
           </label>
           {state.message ? <p className="delete-modal-error">{state.message}</p> : null}
           <div className="delete-modal-actions">
             <button type="button" className="delete-modal-cancel" onClick={() => setOpen(false)}>
-              Cancel
+              キャンセル
             </button>
             <DeleteSubmitButton />
           </div>

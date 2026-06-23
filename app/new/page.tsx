@@ -30,7 +30,8 @@ export default function NewPage({ searchParams }: PageProps) {
   return (
     <section className="new-post-page">
       <header>
-        <h1>New route</h1>
+        <p className="page-eyebrow">ルートを共有</p>
+        <h1>新しいアレンジ</h1>
       </header>
       <NewPostForm
         initialRemainingScore={normalizeScore(searchParams.remaining_score)}

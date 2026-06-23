@@ -44,19 +44,19 @@ export function ScorePicker({ score }: { score: number }) {
             className="score-picker-sheet"
             role="dialog"
             aria-modal="true"
-            aria-label="Score"
+            aria-label="残りスコア"
             onSubmit={applyScore}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="score-picker-head">
-              <p>Score</p>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close score picker">
-                Close
+              <p>残りスコア</p>
+              <button type="button" onClick={() => setOpen(false)} aria-label="スコア選択を閉じる">
+                閉じる
               </button>
             </div>
 
             <label className="score-picker-field">
-              <span>Remaining score 1-701</span>
+              <span>1〜701で入力</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -69,10 +69,10 @@ export function ScorePicker({ score }: { score: number }) {
 
             <div className="score-picker-actions">
               <button type="button" onClick={() => setOpen(false)}>
-                Cancel
+                キャンセル
               </button>
               <button type="submit" className="primary">
-                Apply
+                移動
               </button>
             </div>
           </form>

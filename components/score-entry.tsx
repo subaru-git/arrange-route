@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { BullMode, OutRule } from "@/lib/types/domain";
 
 const outRuleOptions: Array<{ value: OutRule; label: string }> = [
-  { value: "double_out", label: "Double out" },
-  { value: "master_out", label: "Master out" },
-  { value: "single_out", label: "Single out" },
+  { value: "double_out", label: "ダブルアウト" },
+  { value: "master_out", label: "マスターアウト" },
+  { value: "single_out", label: "シングルアウト" },
 ];
 
 const bullModeOptions: Array<{ value: BullMode; label: string }> = [
-  { value: "separate", label: "Separate bull" },
-  { value: "fat", label: "Fat bull" },
+  { value: "separate", label: "セパレートブル" },
+  { value: "fat", label: "ファットブル" },
 ];
 
 function clampScore(value: number) {
@@ -35,7 +36,7 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
   const [score, setScore] = useState("");
   const [outRule, setOutRule] = useState<OutRule>("double_out");
   const [bullMode, setBullMode] = useState<BullMode>("separate");
-  const nextScore = clampScore(Number(score));
+  const nextScore = score ? clampScore(Number(score)) : null;
   const newPostHref = nextScore
     ? `/new?${new URLSearchParams({
         remaining_score: String(nextScore),
@@ -54,9 +55,9 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
     <div className="score-entry">
       <form onSubmit={submit}>
         <label className="score-entry-field">
-            <span>Score 1-701</span>
+            <span>残りスコア（1〜701）</span>
           <input
-            aria-label="Remaining score 1-701"
+            aria-label="残りスコア 1から701"
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
@@ -70,34 +71,32 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
         </label>
 
         <div className="score-entry-mode">
-          <label>
-            <span>Out</span>
-            <select value={outRule} onChange={(event) => setOutRule(event.target.value as OutRule)}>
-              {outRuleOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Bull</span>
-            <select value={bullMode} onChange={(event) => setBullMode(event.target.value as BullMode)}>
-              {bullModeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="select-field">
+            <span>アウトルール</span>
+            <CustomSelect
+              ariaLabel="アウトルール"
+              value={outRule}
+              options={outRuleOptions}
+              onValueChange={(value) => setOutRule(value as OutRule)}
+            />
+          </div>
+          <div className="select-field">
+            <span>ブル</span>
+            <CustomSelect
+              ariaLabel="ブル"
+              value={bullMode}
+              options={bullModeOptions}
+              onValueChange={(value) => setBullMode(value as BullMode)}
+            />
+          </div>
         </div>
         <button type="submit" disabled={!score}>
-          Go
+          アレンジを見る
         </button>
       </form>
 
       <section className="score-entry-recommend">
-        <p>Recommend</p>
+        <p>よく見られるスコア</p>
         <div className="score-entry-shortcuts">
           {commonScores.map((value) => (
             <Link key={value} href={scoreHref(value, outRule, bullMode)}>
@@ -106,7 +105,7 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
           ))}
         </div>
         <p className="score-entry-secondary">
-          Know a route? <Link href={newPostHref}>Add it to the wiki</Link>
+          アレンジを知っていますか？ <Link href={newPostHref}>Wikiに追加する</Link>
         </p>
       </section>
     </div>

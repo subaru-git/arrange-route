@@ -92,10 +92,11 @@ export function RouteDiagram({
   const width = PAD_X * 2 + (visibleCol + 1) * NODE_W + visibleCol * X_GAP;
   const height = PAD_Y * 2 + (maxRow + 1) * NODE_H + maxRow * Y_GAP;
 
+  const highlightedNodeId = hoveredNodeId ?? selectedNodeId;
   const highlightedNodeIds = useMemo(() => {
-    if (!hoveredNodeId) return new Set<string>();
-    return collectPathNodes(hoveredNodeId, parentByNode);
-  }, [hoveredNodeId, parentByNode]);
+    if (!highlightedNodeId) return new Set<string>();
+    return collectPathNodes(highlightedNodeId, parentByNode);
+  }, [highlightedNodeId, parentByNode]);
 
   const highlightedEdgeIds = useMemo(() => {
     const ids = new Set<string>();
@@ -112,9 +113,18 @@ export function RouteDiagram({
   const branchTrunks = [...childrenByNode.entries()].filter(([, children]) => children.length > 1);
 
   const isEmpty = tree.nodes.length === 1;
+  const hasHighlightedPath = highlightedNodeIds.size > 0;
 
   return (
-    <div className={isEmpty ? "route-diagram route-diagram-empty" : "route-diagram"}>
+    <div
+      className={[
+        "route-diagram",
+        isEmpty ? "route-diagram-empty" : "",
+        hasHighlightedPath ? "route-diagram-highlighting" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="route-canvas" style={{ width, height }}>
         <svg className="route-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
           <defs>
@@ -194,25 +204,28 @@ export function RouteDiagram({
           const top = PAD_Y + n.row * (NODE_H + Y_GAP);
           const label = n.id === tree.targetNodeId ? String(target) : n.token;
           const remaining = getRemainingScoreAtNode(tree, target, n.id);
+          const dimmed = hasHighlightedPath && !active && !selected;
+          const classes = [
+            "route-node",
+            selected ? "route-node-selected" : "",
+            active ? "route-node-active" : "",
+            dimmed ? "route-node-dimmed" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
           return (
             <button
               key={n.id}
               type="button"
-              className={
-                selected
-                  ? "route-node route-node-selected"
-                  : active
-                    ? "route-node route-node-active"
-                    : "route-node"
-              }
+              className={classes}
               style={{ left, top, width: NODE_W, height: NODE_H }}
               onMouseEnter={() => setHoveredNodeId(n.id)}
               onMouseLeave={() => setHoveredNodeId(null)}
               onFocus={() => setHoveredNodeId(n.id)}
               onBlur={() => setHoveredNodeId(null)}
               onClick={() => onNodeClick?.(n.id)}
-              aria-label={`${label}, remaining ${remaining}`}
-              title={`${label} / remaining ${remaining}`}
+              aria-label={`${label}、残り ${remaining}`}
+              title={`${label} / 残り ${remaining}`}
             >
               <span className="route-node-remaining">{remaining}</span>
               {label}

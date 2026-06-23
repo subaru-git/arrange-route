@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createPostAction } from "@/app/actions/post-actions";
 import { RouteDiagram } from "@/components/route-diagram";
+import { CustomSelect } from "@/components/ui/custom-select";
 import {
   addTokenToSelectedNode,
   createInitialRouteTree,
@@ -21,9 +22,9 @@ type Multiplier = "S" | "D" | "T";
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
 const dartsLeftOptions = [1, 2, 3];
 const multiplierOptions: Array<{ value: Multiplier; label: string }> = [
-  { value: "S", label: "Single" },
-  { value: "D", label: "Double" },
-  { value: "T", label: "Triple" },
+  { value: "S", label: "シングル" },
+  { value: "D", label: "ダブル" },
+  { value: "T", label: "トリプル" },
 ];
 
 function numericOnly(value: string) {
@@ -35,7 +36,7 @@ function SaveSubmitButton({ canSubmit }: { canSubmit: boolean }) {
 
   return (
     <button type="submit" className="new-form-submit" disabled={!canSubmit || pending}>
-      {pending ? "Saving" : "Save"}
+      {pending ? "保存中…" : "このアレンジを保存"}
     </button>
   );
 }
@@ -88,7 +89,7 @@ export function NewPostForm({
   const nodeCount = tree.nodes.length - 1;
   const selectedNode = getNodeById(tree, selectedNodeId);
   const selectedLabel =
-    selectedNodeId === "target" ? `Score ${remainingScore}` : (selectedNode?.token ?? "Route node");
+    selectedNodeId === "target" ? `スコア ${remainingScore}` : (selectedNode?.token ?? "ルート");
   const selectedRemaining = getRemainingScoreAtNode(tree, remainingScore, selectedNodeId);
   const selectedThrowsUsed = getThrowsUsedAtNode(tree, selectedNodeId);
   const canAddByThrows = selectedThrowsUsed < dartsLeft;
@@ -125,7 +126,7 @@ export function NewPostForm({
       const tokens = pathNodeIds.map((id) => getNodeById(tree, id)?.token ?? "");
       const remaining = remainingScore - tokens.reduce((acc, token) => acc + tokenScore(token), 0);
       const complete = remaining >= 0 && (remaining === 0 || tokens.length >= dartsLeft);
-      const status = remaining < 0 ? "Bust" : complete ? "Done" : "Open";
+      const status = remaining < 0 ? "バースト" : complete ? "完成" : "編集中";
       return {
         id: node.id,
         index: index + 1,
@@ -142,13 +143,13 @@ export function NewPostForm({
   const canSubmit = nodeCount > 0 && !hasBustedLeaves;
   const saveMessage =
     nodeCount === 0
-      ? "Add at least one target to create a route."
+      ? "ターゲットを1つ以上追加してください。"
       : hasBustedLeaves
-        ? "Remove busted routes."
-        : "Ready to save.";
+        ? "バーストしたルートを削除してください。"
+        : "保存できます。";
 
   let guardMessage = "";
-  if (!canAddFromTarget) guardMessage = "Cannot add: remaining score is 0 or less.";
+  if (!canAddFromTarget) guardMessage = "残りスコアが0以下のため追加できません。";
 
   const commitRemainingScore = () => {
     const parsed = Number(remainingScoreInput);
@@ -163,7 +164,7 @@ export function NewPostForm({
       <section className="new-form-section">
         <div className="new-form-grid">
           <label className="new-score-field">
-            Score 1-701
+            残りスコア
             <input
               type="text"
               inputMode="numeric"
@@ -187,41 +188,44 @@ export function NewPostForm({
 
           <input type="hidden" name="darts_left" value={dartsLeft} />
 
-          <label>
-            Darts
-            <select value={dartsLeft} onChange={(e) => setDartsLeft(Number(e.target.value))}>
-              {dartsLeftOptions.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="select-field">
+            <span>残りダーツ</span>
+            <CustomSelect
+              ariaLabel="残りダーツ"
+              value={String(dartsLeft)}
+              options={dartsLeftOptions.map((value) => ({ value: String(value), label: String(value) }))}
+              onValueChange={(value) => setDartsLeft(Number(value))}
+            />
+          </div>
 
-          <label>
-            Out
-            <select
+          <div className="select-field">
+            <span>アウト</span>
+            <CustomSelect
+              ariaLabel="アウト"
               name="out_rule"
               value={outRule}
-              onChange={(e) => setOutRule(e.target.value as OutRule)}
-            >
-              <option value="double_out">Double out</option>
-              <option value="master_out">Master out</option>
-              <option value="single_out">Single out</option>
-            </select>
-          </label>
+              options={[
+                { value: "double_out", label: "ダブルアウト" },
+                { value: "master_out", label: "マスターアウト" },
+                { value: "single_out", label: "シングルアウト" },
+              ]}
+              onValueChange={(value) => setOutRule(value as OutRule)}
+            />
+          </div>
 
-          <label>
-            Bull
-            <select
+          <div className="select-field">
+            <span>ブル</span>
+            <CustomSelect
+              ariaLabel="ブル"
               name="bull_mode"
               value={bullMode}
-              onChange={(e) => setBullMode(e.target.value as BullMode)}
-            >
-              <option value="separate">Separate bull</option>
-              <option value="fat">Fat bull</option>
-            </select>
-          </label>
+              options={[
+                { value: "separate", label: "セパレート" },
+                { value: "fat", label: "ファット" },
+              ]}
+              onValueChange={(value) => setBullMode(value as BullMode)}
+            />
+          </div>
         </div>
       </section>
 
@@ -229,7 +233,8 @@ export function NewPostForm({
 
       <section className="tree-builder">
         <div className="tree-builder-head">
-          <strong>Route</strong>
+          <strong>アレンジツリー</strong>
+          <span> ノードを選び、次のターゲットを追加します</span>
         </div>
 
         <RouteDiagram
@@ -241,7 +246,7 @@ export function NewPostForm({
 
         <div className="builder-tools">
           <div className="target-toolbar">
-            <span>Add</span>
+            <span>追加するターゲット</span>
             <div className="multiplier-segment">
               {multiplierOptions.map((option) => (
                 <button
@@ -285,17 +290,17 @@ export function NewPostForm({
 
           <div className="route-status-grid">
             <div>
-              <span>Remaining</span>
+              <span>残り</span>
               <strong>{selectedRemaining}</strong>
             </div>
             <div>
-              <span>Throw</span>
+              <span>使用ダーツ</span>
               <strong>
                 {selectedThrowsUsed}/{dartsLeft}
               </strong>
             </div>
             <div>
-              <span>Routes</span>
+              <span>完成ルート</span>
               <strong>
                 {completeLeafCount}/{Math.max(leafNodes.length, 1)}
               </strong>
@@ -304,10 +309,10 @@ export function NewPostForm({
 
           <div className="route-actions">
             <button type="button" onClick={removeSelected} disabled={selectedNodeId === "target"}>
-              Remove selected
+              選択以降を削除
             </button>
             <button type="button" onClick={clearAll} disabled={nodeCount === 0}>
-              Clear route
+              すべてクリア
             </button>
           </div>
 
@@ -316,7 +321,7 @@ export function NewPostForm({
       </section>
 
       {routeSummaries.length > 0 ? (
-        <section className="route-summary" aria-label="Route summary">
+        <section className="route-summary" aria-label="ルート一覧">
           {routeSummaries.map((route) => (
             <button
               key={route.id}
@@ -324,14 +329,14 @@ export function NewPostForm({
               className={[
                 "route-summary-item",
                 route.complete ? "complete" : "",
-                route.status === "Bust" ? "bust" : "",
+                route.status === "バースト" ? "bust" : "",
                 selectedNodeId === route.id ? "selected" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               onClick={() => setSelectedNodeId(route.id)}
             >
-              <span className="route-summary-index">Route {route.index}</span>
+              <span className="route-summary-index">ルート {route.index}</span>
               <span className="route-summary-path">{route.label}</span>
               <span className="route-summary-status">{route.status}</span>
               <strong>{route.remaining}</strong>
@@ -341,7 +346,7 @@ export function NewPostForm({
       ) : null}
 
       <details className="new-form-note">
-        <summary>Note</summary>
+        <summary>メモを追加（任意）</summary>
         <textarea name="comment" rows={2} />
       </details>
 

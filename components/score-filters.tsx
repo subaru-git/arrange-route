@@ -22,30 +22,30 @@ export function ScoreFilters() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <label className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-        <span>out</span>
+        <span>アウト</span>
         <UiSelect
           uiSize="compact"
           value={outRule}
           onChange={(e) => setParam("out_rule", e.target.value)}
           className="min-w-28"
         >
-          <option value="">all</option>
-          <option value="double_out">double_out</option>
-          <option value="master_out">master_out</option>
-          <option value="single_out">single_out</option>
+          <option value="">すべて</option>
+          <option value="double_out">ダブルアウト</option>
+          <option value="master_out">マスターアウト</option>
+          <option value="single_out">シングルアウト</option>
         </UiSelect>
       </label>
       <label className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-        <span>bull</span>
+        <span>ブル</span>
         <UiSelect
           uiSize="compact"
           value={bullMode}
           onChange={(e) => setParam("bull_mode", e.target.value)}
           className="min-w-24"
         >
-          <option value="">all</option>
-          <option value="separate">separate</option>
-          <option value="fat">fat</option>
+          <option value="">すべて</option>
+          <option value="separate">セパレート</option>
+          <option value="fat">ファット</option>
         </UiSelect>
       </label>
     </div>
