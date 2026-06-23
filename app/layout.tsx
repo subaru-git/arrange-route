@@ -1,4 +1,5 @@
 import "./globals.css";
+import Image from "next/image";
 import Link from "next/link";
 import { ReactNode } from "react";
 
@@ -13,9 +14,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <header className="app-header">
           <Link href="/scores" className="app-header-title">
-            <span className="app-header-mark" aria-hidden="true">
-              AW
-            </span>
+            <Image
+              className="app-header-mark"
+              src="/arrange-wiki-icon.png"
+              alt=""
+              width={40}
+              height={40}
+              priority
+            />
             <span>
               <strong>Arrange Wiki</strong>
               <small>ダーツのアレンジ辞典</small>
