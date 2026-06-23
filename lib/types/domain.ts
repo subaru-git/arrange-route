@@ -42,6 +42,7 @@ export interface PostCardItem {
   comments: CommentItem[];
   authorName: string;
   createdAt: string;
+  viewerHasUpvoted?: boolean;
 }
 
 export interface ScoreQuery {

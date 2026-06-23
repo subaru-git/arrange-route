@@ -585,6 +585,12 @@ button {
   transition: transform 0.16s ease, border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
 }
 
+.helpful-reaction-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .helpful-reaction:hover {
   color: var(--color-accent-strong);
   background: var(--color-accent-soft);
@@ -606,6 +612,17 @@ button {
 .helpful-reaction.reacted {
   background: var(--color-accent-soft);
   color: var(--color-accent-strong);
+}
+
+.helpful-reaction:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.helpful-reaction-error {
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .post-delete-trigger {

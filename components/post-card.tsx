@@ -14,7 +14,12 @@ export function PostCard({ post }: { post: PostCardItem }) {
         <DeletePostControl postId={post.id} remainingScore={post.remainingScore} />
       </div>
       <footer className="post-card-reactions">
-        <HelpfulReaction postId={post.id} count={post.upCount} />
+        <HelpfulReaction
+          postId={post.id}
+          remainingScore={post.remainingScore}
+          count={post.upCount}
+          initialReacted={post.viewerHasUpvoted}
+        />
       </footer>
     </article>
   );

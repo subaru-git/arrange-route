@@ -10,11 +10,9 @@ import {
   deleteVote,
   upsertVote,
 } from "@/lib/repository";
+import { BROWSER_ID_COOKIE, BROWSER_ID_MAX_AGE } from "@/lib/browser-id";
 import { normalizeRouteTree } from "@/lib/route-tree";
 import { BullMode, OutRule, RouteTree } from "@/lib/types/domain";
-
-const BROWSER_ID_KEY = "arrange_browser_id";
-const BROWSER_ID_AGE = 60 * 60 * 24 * 365;
 
 export type DeletePostActionState = {
   ok: boolean;
@@ -23,11 +21,11 @@ export type DeletePostActionState = {
 
 function getOrCreateBrowserId() {
   const store = cookies();
-  const existing = store.get(BROWSER_ID_KEY)?.value;
+  const existing = store.get(BROWSER_ID_COOKIE)?.value;
   if (existing) return existing;
   const created = crypto.randomUUID();
-  store.set(BROWSER_ID_KEY, created, {
-    maxAge: BROWSER_ID_AGE,
+  store.set(BROWSER_ID_COOKIE, created, {
+    maxAge: BROWSER_ID_MAX_AGE,
     path: "/",
     httpOnly: true,
     sameSite: "lax",
@@ -121,6 +119,27 @@ export async function removeVoteAction(formData: FormData) {
   const postId = String(formData.get("post_id"));
   const browserId = getOrCreateBrowserId();
   await deleteVote({ postId, browserId });
+}
+
+export async function toggleHelpfulAction(formData: FormData) {
+  const postId = String(formData.get("post_id") ?? "");
+  const remainingScore = Number(formData.get("remaining_score"));
+  const shouldReact = formData.get("reacted") === "true";
+
+  if (!postId) throw new Error("投稿が見つかりません。");
+  if (!Number.isInteger(remainingScore) || remainingScore < 1 || remainingScore > 701) {
+    throw new Error("スコアが正しくありません。");
+  }
+
+  const browserId = getOrCreateBrowserId();
+  if (shouldReact) {
+    await upsertVote({ postId, voteType: "up", browserId });
+  } else {
+    await deleteVote({ postId, browserId });
+  }
+
+  revalidatePath(`/scores/${remainingScore}`);
+  return { reacted: shouldReact };
 }
 
 export async function commentAction(formData: FormData) {
