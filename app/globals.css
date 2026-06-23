@@ -570,6 +570,7 @@ button {
 }
 
 .helpful-reaction {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -585,6 +586,12 @@ button {
   transition: transform 0.16s ease, border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
 }
 
+.helpful-reaction-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .helpful-reaction:hover {
   color: var(--color-accent-strong);
   background: var(--color-accent-soft);
@@ -596,6 +603,14 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.helpful-reaction-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+}
+
 .helpful-reaction-dart {
   display: inline-block;
   font-size: 16px;
@@ -603,9 +618,74 @@ button {
   transform: translateY(-0.5px);
 }
 
+.helpful-reaction-flight {
+  position: absolute;
+  top: 1px;
+  right: -1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0;
+}
+
 .helpful-reaction.reacted {
   background: var(--color-accent-soft);
   color: var(--color-accent-strong);
+}
+
+.helpful-reaction:disabled {
+  cursor: default;
+}
+
+.helpful-reaction.pending .helpful-reaction-dart {
+  animation: helpful-target-pulse 0.72s ease-in-out infinite;
+}
+
+.helpful-reaction.pending .helpful-reaction-flight {
+  animation: helpful-dart-flight 0.72s ease-in-out infinite;
+}
+
+@keyframes helpful-target-pulse {
+  0%,
+  100% {
+    transform: translateY(-0.5px) scale(1);
+  }
+
+  45% {
+    transform: translateY(-0.5px) scale(0.86);
+  }
+
+  65% {
+    transform: translateY(-0.5px) scale(1.08);
+  }
+}
+
+@keyframes helpful-dart-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-10px, 8px) scale(0.5);
+  }
+
+  35% {
+    opacity: 0.8;
+  }
+
+  68% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.25);
+  }
+}
+
+.helpful-reaction-error {
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .post-delete-trigger {
@@ -1616,6 +1696,15 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .route-node {
     transition-duration: 0.01ms !important;
+  }
+
+  .helpful-reaction.pending .helpful-reaction-dart,
+  .helpful-reaction.pending .helpful-reaction-flight {
+    animation: none;
+  }
+
+  .helpful-reaction.pending .helpful-reaction-flight {
+    opacity: 0.7;
   }
 }
 

@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ModePicker } from "@/components/mode-picker";
 import { PostCard } from "@/components/post-card";
 import { ScorePicker } from "@/components/score-picker";
 import { listPosts } from "@/lib/repository";
 import { BullMode, OutRule } from "@/lib/types/domain";
+import { BROWSER_ID_COOKIE } from "@/lib/browser-id";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +50,11 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
   const outRule = normalizeOutRule(searchParams.out_rule);
   const bullMode = normalizeBullMode(searchParams.bull_mode);
 
-  const posts = await listPosts({ remainingScore, outRule, bullMode, sort: "latest" });
+  const browserId = cookies().get(BROWSER_ID_COOKIE)?.value;
+  const posts = await listPosts(
+    { remainingScore, outRule, bullMode, sort: "latest" },
+    browserId
+  );
 
   return (
     <section className="mx-auto max-w-[760px] space-y-4 py-3">

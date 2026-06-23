@@ -13,6 +13,14 @@ import {
 
 const demoNow = new Date().toISOString();
 
+declare global {
+  var __arrangeWikiDemoVotes: Map<string, "up" | "down"> | undefined;
+}
+
+const demoVotes =
+  globalThis.__arrangeWikiDemoVotes ??
+  (globalThis.__arrangeWikiDemoVotes = new Map<string, "up" | "down">());
+
 const demoPosts: PostCardItem[] = [
   {
     id: "demo-1",
@@ -382,14 +390,40 @@ const demoPosts: PostCardItem[] = [
   },
 ];
 
-function listDemoPosts(query: ScoreQuery, sort: SortMode) {
+function demoVoteKey(input: { postId: string; userId?: string; browserId?: string }) {
+  const voterId = input.userId ? `user:${input.userId}` : `browser:${input.browserId}`;
+  return `${input.postId}:${voterId}`;
+}
+
+function listDemoPosts(query: ScoreQuery, sort: SortMode, viewerBrowserId?: string) {
   const filtered = demoPosts.filter((p) => {
     if (p.remainingScore !== query.remainingScore) return false;
     if (query.outRule && p.outRule !== query.outRule) return false;
     if (query.bullMode && p.bullMode !== query.bullMode) return false;
     return true;
   });
-  return sortPosts(filtered, sort);
+  return sortPosts(
+    filtered.map((post) => {
+      let addedUpCount = 0;
+      let addedDownCount = 0;
+      for (const [key, voteType] of demoVotes) {
+        if (!key.startsWith(`${post.id}:`)) continue;
+        if (voteType === "up") addedUpCount += 1;
+        if (voteType === "down") addedDownCount += 1;
+      }
+
+      return {
+        ...post,
+        upCount: post.upCount + addedUpCount,
+        downCount: post.downCount + addedDownCount,
+        voteScore: post.voteScore + addedUpCount - addedDownCount,
+        viewerHasUpvoted: viewerBrowserId
+          ? demoVotes.get(demoVoteKey({ postId: post.id, browserId: viewerBrowserId })) === "up"
+          : false,
+      };
+    }),
+    sort
+  );
 }
 
 function sortPosts(items: PostCardItem[], sort: SortMode) {
@@ -402,11 +436,14 @@ function sortPosts(items: PostCardItem[], sort: SortMode) {
   });
 }
 
-export async function listPosts(query: ScoreQuery): Promise<PostCardItem[]> {
+export async function listPosts(
+  query: ScoreQuery,
+  viewerBrowserId?: string
+): Promise<PostCardItem[]> {
   const sort = query.sort ?? "popular";
 
   if (process.env.NODE_ENV === "development") {
-    return listDemoPosts(query, sort);
+    return listDemoPosts(query, sort, viewerBrowserId);
   }
   if (!hasSupabase) {
     throw new Error("Supabase env vars are required outside development");
@@ -433,7 +470,12 @@ export async function listPosts(query: ScoreQuery): Promise<PostCardItem[]> {
   const ids = posts.map((p) => p.id);
   const authorIds = [...new Set(posts.map((p) => p.author_user_id))];
 
-  const [{ data: votes }, { data: comments }, { data: profiles }] = await Promise.all([
+  const [
+    { data: votes, error: votesError },
+    { data: comments, error: commentsError },
+    { data: profiles, error: profilesError },
+    viewerVotesResult,
+  ] = await Promise.all([
     supabase.from("votes").select("post_id,vote_type").in("post_id", ids),
     supabase
       .from("comments")
@@ -442,9 +484,24 @@ export async function listPosts(query: ScoreQuery): Promise<PostCardItem[]> {
       .is("deleted_at", null)
       .order("created_at", { ascending: true }),
     supabase.from("profiles").select("id,display_name").in("id", authorIds),
+    viewerBrowserId
+      ? supabase
+          .from("votes")
+          .select("post_id")
+          .in("post_id", ids)
+          .eq("browser_id", viewerBrowserId)
+          .eq("vote_type", "up")
+      : Promise.resolve({ data: [], error: null }),
   ]);
+  if (votesError) throw votesError;
+  if (commentsError) throw commentsError;
+  if (profilesError) throw profilesError;
+  if (viewerVotesResult.error) throw viewerVotesResult.error;
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const viewerUpvotedPostIds = new Set(
+    (viewerVotesResult.data ?? []).map((vote) => vote.post_id)
+  );
 
   const commentsByPost = new Map<string, CommentItem[]>();
   (comments ?? []).forEach((c) => {
@@ -485,6 +542,7 @@ export async function listPosts(query: ScoreQuery): Promise<PostCardItem[]> {
       comments: cmts,
       authorName: profileMap.get(p.author_user_id) ?? "unknown",
       createdAt: p.created_at,
+      viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
     };
   });
 
@@ -612,38 +670,55 @@ export async function upsertVote(input: {
   userId?: string;
   browserId?: string;
 }) {
-  if (!hasSupabase) return;
+  if (process.env.NODE_ENV === "development") {
+    if (!demoPosts.some((item) => item.id === input.postId)) throw new Error("Post not found");
+
+    const key = demoVoteKey(input);
+    demoVotes.set(key, input.voteType);
+    return;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
   const supabase = getSupabaseClient();
 
   if (input.userId) {
-    const { error } = await supabase.from("votes").upsert(
-      {
-        post_id: input.postId,
-        user_id: input.userId,
-        vote_type: input.voteType,
-      },
-      {
-        onConflict: "post_id,user_id",
-      }
-    );
-    if (error) throw error;
+    const { data: updated, error: updateError } = await supabase
+      .from("votes")
+      .update({ vote_type: input.voteType })
+      .eq("post_id", input.postId)
+      .eq("user_id", input.userId)
+      .select("id");
+    if (updateError) throw updateError;
+    if (updated && updated.length > 0) return;
+
+    const { error: insertError } = await supabase.from("votes").insert({
+      post_id: input.postId,
+      user_id: input.userId,
+      vote_type: input.voteType,
+    });
+    if (insertError) throw insertError;
     return;
   }
 
   if (!input.browserId) throw new Error("browserId is required for guest vote");
 
-  const { error } = await supabase.from("votes").upsert(
-    {
-      post_id: input.postId,
-      browser_id: input.browserId,
-      vote_type: input.voteType,
-    },
-    {
-      onConflict: "post_id,browser_id",
-    }
-  );
+  const { data: updated, error: updateError } = await supabase
+    .from("votes")
+    .update({ vote_type: input.voteType })
+    .eq("post_id", input.postId)
+    .eq("browser_id", input.browserId)
+    .select("id");
+  if (updateError) throw updateError;
+  if (updated && updated.length > 0) return;
 
-  if (error) throw error;
+  const { error: insertError } = await supabase.from("votes").insert({
+    post_id: input.postId,
+    browser_id: input.browserId,
+    vote_type: input.voteType,
+  });
+  if (insertError) throw insertError;
 }
 
 export async function deleteVote(input: {
@@ -651,7 +726,15 @@ export async function deleteVote(input: {
   userId?: string;
   browserId?: string;
 }) {
-  if (!hasSupabase) return;
+  if (process.env.NODE_ENV === "development") {
+    const key = demoVoteKey(input);
+    demoVotes.delete(key);
+    return;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
   const supabase = getSupabaseClient();
 
   if (input.userId) {
