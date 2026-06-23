@@ -3,6 +3,12 @@
 import { useState, useTransition } from "react";
 import { toggleHelpfulAction } from "@/app/actions/post-actions";
 
+const MINIMUM_FEEDBACK_MS = 500;
+
+function waitForFeedback() {
+  return new Promise((resolve) => window.setTimeout(resolve, MINIMUM_FEEDBACK_MS));
+}
+
 export function HelpfulReaction({
   postId,
   remainingScore,
@@ -34,7 +40,7 @@ export function HelpfulReaction({
         formData.set("post_id", postId);
         formData.set("remaining_score", String(remainingScore));
         formData.set("reacted", String(nextReacted));
-        await toggleHelpfulAction(formData);
+        await Promise.all([toggleHelpfulAction(formData), waitForFeedback()]);
       } catch {
         setReacted(previousReacted);
         setDisplayCount((current) => Math.max(0, current + (nextReacted ? -1 : 1)));
@@ -47,14 +53,22 @@ export function HelpfulReaction({
     <div className="helpful-reaction-wrap">
       <button
         type="button"
-        className={reacted ? "helpful-reaction reacted" : "helpful-reaction"}
+        className={[
+          "helpful-reaction",
+          reacted ? "reacted" : "",
+          pending ? "pending" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         onClick={react}
         disabled={pending}
         aria-pressed={reacted}
+        aria-busy={pending}
         aria-label={`参考になった ${displayCount}件`}
       >
-        <span className="helpful-reaction-dart" aria-hidden="true">
-          🎯
+        <span className="helpful-reaction-icon" aria-hidden="true">
+          <span className="helpful-reaction-dart">🎯</span>
+          <span className="helpful-reaction-flight" />
         </span>
         <span>{reacted ? "参考になった！" : "参考になった"}</span>
         <strong>{displayCount}</strong>

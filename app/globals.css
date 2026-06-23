@@ -570,6 +570,7 @@ button {
 }
 
 .helpful-reaction {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -602,11 +603,30 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.helpful-reaction-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+}
+
 .helpful-reaction-dart {
   display: inline-block;
   font-size: 16px;
   line-height: 1;
   transform: translateY(-0.5px);
+}
+
+.helpful-reaction-flight {
+  position: absolute;
+  top: 1px;
+  right: -1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0;
 }
 
 .helpful-reaction.reacted {
@@ -615,8 +635,51 @@ button {
 }
 
 .helpful-reaction:disabled {
-  cursor: wait;
-  opacity: 0.72;
+  cursor: default;
+}
+
+.helpful-reaction.pending .helpful-reaction-dart {
+  animation: helpful-target-pulse 0.72s ease-in-out infinite;
+}
+
+.helpful-reaction.pending .helpful-reaction-flight {
+  animation: helpful-dart-flight 0.72s ease-in-out infinite;
+}
+
+@keyframes helpful-target-pulse {
+  0%,
+  100% {
+    transform: translateY(-0.5px) scale(1);
+  }
+
+  45% {
+    transform: translateY(-0.5px) scale(0.86);
+  }
+
+  65% {
+    transform: translateY(-0.5px) scale(1.08);
+  }
+}
+
+@keyframes helpful-dart-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-10px, 8px) scale(0.5);
+  }
+
+  35% {
+    opacity: 0.8;
+  }
+
+  68% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.25);
+  }
 }
 
 .helpful-reaction-error {
@@ -1633,6 +1696,15 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .route-node {
     transition-duration: 0.01ms !important;
+  }
+
+  .helpful-reaction.pending .helpful-reaction-dart,
+  .helpful-reaction.pending .helpful-reaction-flight {
+    animation: none;
+  }
+
+  .helpful-reaction.pending .helpful-reaction-flight {
+    opacity: 0.7;
   }
 }
 
