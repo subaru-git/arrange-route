@@ -3,23 +3,16 @@
 ## Project Decisions (Fixed)
 
 - Branch strategy: `feature/*` centric development.
-- DB switch timing: move from staging DB to production DB after delete feature is implemented.
-- Reason for switch timing: keep current trial data if it is usable.
+- Existing Supabase data is the production data source.
+- Staging uses a separate empty Supabase project.
 - Release timing: release is defined by domain setup completion.
 
-## Current Phase
+## Environment Mapping
 
-- Code branch in active use: `feature/*`
-- DB in active use: Supabase staging
-- Vercel env target: Preview/Production may temporarily point to staging until DB switch.
-
-## DB Switch Checklist (After Delete Feature)
-
-1. Create production Supabase project.
-2. Apply migrations in `supabase/migrations/` to production DB.
-3. Set Vercel Production env vars to production DB values.
-4. Run smoke test on production URL.
-5. Keep staging DB for ongoing feature verification.
+- Vercel Production -> Supabase production project
+- Vercel Preview -> Supabase staging project
+- Production data remains in the existing Supabase project promoted from staging.
+- The staging project is initialized only from `supabase/migrations/` and test data.
 
 ## Environment Variables
 
@@ -34,6 +27,8 @@ Required keys:
 
 - Migration files are the source of truth for schema changes.
 - Even in feature-only flow, avoid ad-hoc SQL changes without migration files.
+- Do not use `supabase migration repair` for a new empty project. Run
+  `supabase db push` so every migration is actually applied.
 
 ## CI/CD And Migration Automation
 
