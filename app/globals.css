@@ -688,11 +688,11 @@ button {
   font-weight: 650;
 }
 
+.post-edit-trigger,
 .post-delete-trigger {
   appearance: none;
   position: absolute;
   top: 16px;
-  right: 18px;
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -710,6 +710,23 @@ button {
   transition: color 0.15s ease, filter 0.15s ease;
 }
 
+.post-edit-trigger {
+  right: 44px;
+}
+
+.post-delete-trigger {
+  right: 18px;
+}
+
+.post-edit-trigger:hover,
+.post-edit-trigger:focus-visible {
+  color: var(--color-accent);
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  outline: none;
+}
+
 .post-delete-trigger:hover,
 .post-delete-trigger:focus-visible {
   color: var(--color-danger);
@@ -720,15 +737,32 @@ button {
 }
 
 .post-card-main:hover .post-delete-trigger,
+.post-card-main:hover .post-edit-trigger,
+.post-edit-trigger:focus-visible,
 .post-delete-trigger:focus-visible {
   color: rgb(117 110 104 / 46%);
 }
 
+.post-edit-trigger:hover,
+.post-edit-trigger:focus-visible {
+  color: var(--color-accent);
+}
+
+.post-delete-trigger:hover,
+.post-delete-trigger:focus-visible {
+  color: var(--color-danger);
+}
+
+.post-edit-icon,
 .post-delete-icon {
   width: 18px;
   height: 18px;
   fill: currentColor;
   pointer-events: none;
+}
+
+.post-edit-icon {
+  fill: currentColor;
 }
 
 .delete-modal {
@@ -833,6 +867,30 @@ button {
 .delete-modal-confirm:disabled {
   cursor: not-allowed;
   opacity: 0.65;
+}
+
+.edit-password-field {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.edit-password-field input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgb(154 167 188 / 24%);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+}
+
+.edit-password-field input:focus {
+  outline: 1px solid var(--color-line-active);
 }
 
 .vote-rail {

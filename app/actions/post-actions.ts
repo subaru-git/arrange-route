@@ -8,6 +8,7 @@ import {
   createPost,
   deletePost,
   deleteVote,
+  updatePost,
   upsertVote,
 } from "@/lib/repository";
 import { BROWSER_ID_COOKIE, BROWSER_ID_MAX_AGE } from "@/lib/browser-id";
@@ -78,6 +79,52 @@ export async function createPostAction(formData: FormData) {
   });
 
   revalidatePath("/scores");
+  revalidatePath(`/scores/${remainingScore}`);
+  redirect(`/scores/${remainingScore}?out_rule=${outRule}&bull_mode=${bullMode}`);
+}
+
+export async function editPostAction(formData: FormData) {
+  const postId = String(formData.get("post_id") ?? "");
+  const originalRemainingScore = Number(formData.get("original_remaining_score"));
+  const remainingScore = Number(formData.get("remaining_score"));
+  const dartsLeft = Number(formData.get("darts_left"));
+  const outRule = String(formData.get("out_rule")) as OutRule;
+  const bullMode = String(formData.get("bull_mode")) as BullMode;
+  const routeTreeJson = String(formData.get("route_tree_json") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const editPassword = `${getJapanDatePasswordPrefix()}${originalRemainingScore}`;
+
+  if (!postId) throw new Error("投稿が見つかりません。");
+  if (
+    !Number.isInteger(originalRemainingScore) ||
+    originalRemainingScore < 1 ||
+    originalRemainingScore > 701
+  ) {
+    throw new Error("元のスコアが正しくありません。");
+  }
+  if (password !== editPassword) throw new Error("パスワードが違います。");
+
+  let parsed: unknown = null;
+  if (routeTreeJson) {
+    try {
+      parsed = JSON.parse(routeTreeJson);
+    } catch {
+      parsed = null;
+    }
+  }
+  const routeTree: RouteTree = normalizeRouteTree(parsed);
+
+  await updatePost({
+    postId,
+    remainingScore,
+    dartsLeft,
+    outRule,
+    bullMode,
+    routeTree,
+  });
+
+  revalidatePath("/scores");
+  revalidatePath(`/scores/${originalRemainingScore}`);
   revalidatePath(`/scores/${remainingScore}`);
   redirect(`/scores/${remainingScore}?out_rule=${outRule}&bull_mode=${bullMode}`);
 }
