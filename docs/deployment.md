@@ -11,6 +11,7 @@
 
 - Vercel Production -> Supabase production project
 - Vercel Preview -> Supabase staging project
+- Local development -> Supabase staging project
 - Production data remains in the existing Supabase project promoted from staging.
 - The staging project is initialized only from `supabase/migrations/` and test data.
 

@@ -12,7 +12,7 @@ If Supabase env vars are missing, the app runs with demo in-memory data for `/sc
 
 ## Environments
 
-- `local`: `.env.local`
+- `local`: `.env.local` + Supabase staging project
 - `staging`: Vercel Preview + Supabase staging project
 - `production`: Vercel Production + Supabase production project
 
