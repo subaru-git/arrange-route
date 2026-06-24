@@ -13,6 +13,8 @@ import {
 } from "@/lib/repository";
 import { BROWSER_ID_COOKIE, BROWSER_ID_MAX_AGE } from "@/lib/browser-id";
 import { normalizeRouteTree } from "@/lib/route-tree";
+import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { BullMode, OutRule, RouteTree } from "@/lib/types/domain";
 
 export type DeletePostActionState = {
@@ -50,6 +52,27 @@ function getJapanDatePasswordPrefix(date = new Date()) {
   return `${values.year}${values.month}${values.day}`;
 }
 
+function getDisplayName(user: { email?: string; user_metadata?: Record<string, unknown> }) {
+  const fullName = user.user_metadata?.full_name;
+  if (typeof fullName === "string" && fullName.trim()) return fullName.trim();
+  if (user.email) return user.email.split("@")[0] || user.email;
+  return "user";
+}
+
+function buildNewPostRedirect(input: {
+  remainingScore: number;
+  outRule: OutRule;
+  bullMode: BullMode;
+}) {
+  const params = new URLSearchParams();
+  if (Number.isFinite(input.remainingScore)) {
+    params.set("remaining_score", String(input.remainingScore));
+  }
+  params.set("out_rule", input.outRule);
+  params.set("bull_mode", input.bullMode);
+  return `/new?${params.toString()}`;
+}
+
 export async function createPostAction(formData: FormData) {
   const remainingScore = Number(formData.get("remaining_score"));
   const dartsLeft = Number(formData.get("darts_left"));
@@ -67,9 +90,22 @@ export async function createPostAction(formData: FormData) {
     }
   }
   const routeTree: RouteTree = normalizeRouteTree(parsed);
+  const redirectPath = buildNewPostRedirect({ remainingScore, outRule, bullMode });
+
+  if (!hasSupabaseAuthConfig) {
+    redirect(redirectPath);
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    redirect(redirectPath);
+  }
 
   await createPost({
-    authorUserId: getDemoUserId(),
+    supabaseClient: supabase,
+    authorUserId: data.user.id,
+    authorName: getDisplayName(data.user),
     remainingScore,
     dartsLeft,
     outRule,

@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeRouteTree } from "@/lib/route-tree";
 import { getSupabaseClient, hasSupabase, hasSupabaseAdmin } from "@/lib/supabase/client";
 import {
@@ -550,7 +551,9 @@ export async function listPosts(
 }
 
 export async function createPost(input: {
+  supabaseClient?: SupabaseClient;
   authorUserId: string;
+  authorName?: string;
   remainingScore: number;
   dartsLeft: number;
   outRule: OutRule;
@@ -579,12 +582,12 @@ export async function createPost(input: {
               id: randomUUID(),
               postId: id,
               body: input.initialComment.trim(),
-              authorName: "demo_user",
+              authorName: input.authorName ?? "demo_user",
               createdAt,
             },
           ]
         : [],
-      authorName: "demo_user",
+      authorName: input.authorName ?? "demo_user",
       createdAt,
     });
 
@@ -594,16 +597,16 @@ export async function createPost(input: {
     throw new Error("Supabase env vars are required outside development");
   }
 
-  if (!hasSupabaseAdmin) {
+  if (!input.supabaseClient && !hasSupabaseAdmin) {
     throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_KEY is required to save posts with the demo user"
+      "Authenticated Supabase client or service role key is required to save posts"
     );
   }
 
-  const supabase = getSupabaseClient({ admin: true });
+  const supabase = input.supabaseClient ?? getSupabaseClient({ admin: true });
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: input.authorUserId,
-    display_name: "demo_user",
+    display_name: input.authorName ?? "demo_user",
   });
   if (profileError) throw profileError;
 

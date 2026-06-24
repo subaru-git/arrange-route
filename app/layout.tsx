@@ -1,4 +1,5 @@
 import "./globals.css";
+import { AuthStatus } from "@/components/auth-status";
 import Image from "next/image";
 import Link from "next/link";
 import { ReactNode } from "react";
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <small>ダーツのアレンジ辞典</small>
             </span>
           </Link>
+          <AuthStatus />
         </header>
         <main className="container">{children}</main>
       </body>
