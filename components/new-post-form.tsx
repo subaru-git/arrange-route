@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { createPostAction } from "@/app/actions/post-actions";
+import { createPostAction, editPostAction } from "@/app/actions/post-actions";
 import { RouteDiagram } from "@/components/route-diagram";
 import { CustomSelect } from "@/components/ui/custom-select";
 import {
@@ -31,34 +31,44 @@ function numericOnly(value: string) {
   return value.replace(/\D/g, "");
 }
 
-function SaveSubmitButton({ canSubmit }: { canSubmit: boolean }) {
+function SaveSubmitButton({ canSubmit, label }: { canSubmit: boolean; label: string }) {
   const { pending } = useFormStatus();
 
   return (
     <button type="submit" className="new-form-submit" disabled={!canSubmit || pending}>
-      {pending ? "保存中…" : "このアレンジを保存"}
+      {pending ? "保存中…" : label}
     </button>
   );
 }
 
 interface NewPostFormProps {
+  mode?: "create" | "edit";
+  postId?: string;
   initialRemainingScore?: number;
+  originalRemainingScore?: number;
+  initialDartsLeft?: number;
   initialOutRule?: OutRule;
   initialBullMode?: BullMode;
+  initialRouteTree?: RouteTree;
 }
 
 export function NewPostForm({
+  mode = "create",
+  postId,
   initialRemainingScore = 70,
+  originalRemainingScore = initialRemainingScore,
+  initialDartsLeft = 3,
   initialOutRule = "double_out",
   initialBullMode = "separate",
+  initialRouteTree,
 }: NewPostFormProps) {
   const [remainingScore, setRemainingScore] = useState(initialRemainingScore);
   const [remainingScoreInput, setRemainingScoreInput] = useState(String(initialRemainingScore));
-  const [dartsLeft, setDartsLeft] = useState(3);
+  const [dartsLeft, setDartsLeft] = useState(initialDartsLeft);
   const [outRule, setOutRule] = useState<OutRule>(initialOutRule);
   const [bullMode, setBullMode] = useState<BullMode>(initialBullMode);
   const [multiplier, setMultiplier] = useState<Multiplier>("T");
-  const [tree, setTree] = useState<RouteTree>(() => createInitialRouteTree());
+  const [tree, setTree] = useState<RouteTree>(() => initialRouteTree ?? createInitialRouteTree());
   const [selectedNodeId, setSelectedNodeId] = useState<string>("target");
 
   const bullButtons = useMemo(() => {
@@ -159,8 +169,19 @@ export function NewPostForm({
     setSelectedNodeId("target");
   };
 
+  const isEditMode = mode === "edit";
+  const formAction = isEditMode ? editPostAction : createPostAction;
+  const submitLabel = isEditMode ? "変更を保存" : "このアレンジを保存";
+
   return (
-    <form action={createPostAction} className="new-form">
+    <form action={formAction} className="new-form">
+      {isEditMode ? (
+        <>
+          <input type="hidden" name="post_id" value={postId ?? ""} />
+          <input type="hidden" name="original_remaining_score" value={originalRemainingScore} />
+        </>
+      ) : null}
+
       <section className="new-form-section">
         <div className="new-form-grid">
           <label className="new-score-field">
@@ -345,13 +366,20 @@ export function NewPostForm({
         </section>
       ) : null}
 
-      <details className="new-form-note">
-        <summary>メモを追加（任意）</summary>
-        <textarea name="comment" rows={2} />
-      </details>
+      {isEditMode ? (
+        <label className="edit-password-field">
+          <span>編集パスワード</span>
+          <input type="password" name="password" autoComplete="current-password" required />
+        </label>
+      ) : (
+        <details className="new-form-note">
+          <summary>メモを追加（任意）</summary>
+          <textarea name="comment" rows={2} />
+        </details>
+      )}
 
       <p className={canSubmit ? "save-status ready" : "save-status"}>{saveMessage}</p>
-      <SaveSubmitButton canSubmit={canSubmit} />
+      <SaveSubmitButton canSubmit={canSubmit} label={submitLabel} />
     </form>
   );
 }

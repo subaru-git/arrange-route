@@ -634,6 +634,121 @@ export async function createPost(input: {
   return data;
 }
 
+export async function getPost(postId: string): Promise<PostCardItem | null> {
+  if (process.env.NODE_ENV === "development") {
+    return demoPosts.find((post) => post.id === postId) ?? null;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  const supabase = getSupabaseClient();
+  const { data: post, error } = await supabase
+    .from("posts")
+    .select(
+      "id,author_user_id,remaining_score,darts_left,out_rule,bull_mode,route_tree,created_at"
+    )
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!post) return null;
+
+  const [
+    { data: votes, error: votesError },
+    { data: comments, error: commentsError },
+    { data: profiles, error: profilesError },
+  ] = await Promise.all([
+    supabase.from("votes").select("vote_type").eq("post_id", post.id),
+    supabase
+      .from("comments")
+      .select("id,post_id,body,created_at,author_user_id")
+      .eq("post_id", post.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("id,display_name").eq("id", post.author_user_id),
+  ]);
+
+  if (votesError) throw votesError;
+  if (commentsError) throw commentsError;
+  if (profilesError) throw profilesError;
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const upCount = (votes ?? []).filter((vote) => vote.vote_type === "up").length;
+  const downCount = (votes ?? []).filter((vote) => vote.vote_type === "down").length;
+  const commentItems: CommentItem[] = (comments ?? []).map((comment) => ({
+    id: comment.id,
+    postId: comment.post_id,
+    body: comment.body,
+    authorName: profileMap.get(comment.author_user_id) ?? "unknown",
+    createdAt: comment.created_at,
+  }));
+
+  return {
+    id: post.id,
+    remainingScore: post.remaining_score,
+    dartsLeft: post.darts_left,
+    outRule: post.out_rule,
+    bullMode: post.bull_mode,
+    routeTree: normalizeRouteTree(post.route_tree),
+    voteScore: upCount - downCount,
+    upCount,
+    downCount,
+    commentCount: commentItems.length,
+    comments: commentItems,
+    authorName: profileMap.get(post.author_user_id) ?? "unknown",
+    createdAt: post.created_at,
+  };
+}
+
+export async function updatePost(input: {
+  postId: string;
+  remainingScore: number;
+  dartsLeft: number;
+  outRule: OutRule;
+  bullMode: BullMode;
+  routeTree: RouteTree;
+}) {
+  if (process.env.NODE_ENV === "development") {
+    const post = demoPosts.find((item) => item.id === input.postId);
+    if (!post) throw new Error("Post not found");
+
+    post.remainingScore = input.remainingScore;
+    post.dartsLeft = input.dartsLeft;
+    post.outRule = input.outRule;
+    post.bullMode = input.bullMode;
+    post.routeTree = input.routeTree;
+    return;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  if (!hasSupabaseAdmin) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_KEY is required to edit posts"
+    );
+  }
+
+  const supabase = getSupabaseClient({ admin: true });
+  const { error } = await supabase
+    .from("posts")
+    .update({
+      remaining_score: input.remainingScore,
+      darts_left: input.dartsLeft,
+      out_rule: input.outRule,
+      bull_mode: input.bullMode,
+      route_tree: input.routeTree,
+    })
+    .eq("id", input.postId)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+}
+
 export async function deletePost(input: { postId: string; remainingScore: number }) {
   if (process.env.NODE_ENV === "development") {
     const index = demoPosts.findIndex(
