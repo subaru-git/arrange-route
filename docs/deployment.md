@@ -20,9 +20,14 @@
 Required keys:
 
 - `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY`, or `SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SECRET_KEY`, or `SUPABASE_SERVICE_KEY` (server-only; required while demo-user posting is used)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_PUBLISHABLE_KEY`, or `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SECRET_KEY`, or `SUPABASE_SERVICE_KEY` (server-only; not required for logged-in posting, but still required while demo-user comments or admin-only maintenance flows remain)
 - `DEMO_USER_ID` (optional)
+
+Supabase Auth Google OAuth redirect URLs:
+
+- Local: `http://localhost:3000/auth/callback`
+- Vercel Preview / Production: `https://<domain>/auth/callback`
 
 ## Notes
 
