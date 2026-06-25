@@ -41,6 +41,7 @@ export interface PostCardItem {
   commentCount: number;
   comments: CommentItem[];
   authorName: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
   viewerHasUpvoted?: boolean;
 }
