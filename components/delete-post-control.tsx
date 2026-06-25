@@ -73,11 +73,8 @@ export function DeletePostControl({
           <input type="hidden" name="remaining_score" value={remainingScore} />
           <div className="delete-modal-copy">
             <h2 id={`delete-title-${postId}`}>アレンジを削除</h2>
+            <p>このアレンジを削除します。</p>
           </div>
-          <label className="delete-password-field">
-            <span>削除パスワード</span>
-            <input name="password" type="password" autoComplete="current-password" autoFocus />
-          </label>
           {state.message ? <p className="delete-modal-error">{state.message}</p> : null}
           <div className="delete-modal-actions">
             <button type="button" className="delete-modal-cancel" onClick={() => setOpen(false)}>

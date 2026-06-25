@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { NewPostForm } from "@/components/new-post-form";
 import { getPost } from "@/lib/repository";
+import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,10 @@ interface PageProps {
 export default async function EditPage({ params }: PageProps) {
   const post = await getPost(params.post_id);
   if (!post) notFound();
+  if (!hasSupabaseAuthConfig) notFound();
+
+  const { data } = await createServerSupabaseClient().auth.getUser();
+  if (!data.user || post.authorUserId !== data.user.id) notFound();
 
   return (
     <section className="new-post-page">

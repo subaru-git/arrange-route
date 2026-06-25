@@ -4,6 +4,8 @@ import { ModePicker } from "@/components/mode-picker";
 import { PostCard } from "@/components/post-card";
 import { ScorePicker } from "@/components/score-picker";
 import { listPosts } from "@/lib/repository";
+import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { BullMode, OutRule } from "@/lib/types/domain";
 import { BROWSER_ID_COOKIE } from "@/lib/browser-id";
 
@@ -51,9 +53,13 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
   const bullMode = normalizeBullMode(searchParams.bull_mode);
 
   const browserId = cookies().get(BROWSER_ID_COOKIE)?.value;
+  const viewerUserId = hasSupabaseAuthConfig
+    ? (await createServerSupabaseClient().auth.getUser()).data.user?.id
+    : undefined;
   const posts = await listPosts(
     { remainingScore, outRule, bullMode, sort: "latest" },
-    browserId
+    browserId,
+    viewerUserId
   );
 
   return (
