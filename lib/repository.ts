@@ -566,6 +566,177 @@ export async function listPosts(
   return sortPosts(result, sort);
 }
 
+export async function listUserPosts(
+  authorUserId: string,
+  viewerBrowserId?: string,
+  remainingScore?: number
+): Promise<PostCardItem[]> {
+  if (useDemoData) {
+    return sortPosts(
+      demoPosts
+        .filter(
+          (post) =>
+            post.authorUserId === authorUserId &&
+            (remainingScore === undefined || post.remainingScore === remainingScore)
+        )
+        .map((post) => ({
+          ...post,
+          canManage: true,
+          viewerHasUpvoted: viewerBrowserId
+            ? demoVotes.get(`${viewerBrowserId}:${post.id}`) === "up"
+            : false,
+        })),
+      "latest"
+    );
+  }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  const supabase = getSupabaseClient();
+  let q = supabase
+    .from("posts")
+    .select(
+      "id,author_user_id,remaining_score,darts_left,out_rule,bull_mode,route_tree,created_at"
+    )
+    .eq("author_user_id", authorUserId)
+    .is("deleted_at", null);
+
+  if (remainingScore !== undefined) q = q.eq("remaining_score", remainingScore);
+
+  const { data: posts, error } = await q
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  if (!posts || posts.length === 0) return [];
+
+  const ids = posts.map((p) => p.id);
+  const authorIds = [...new Set(posts.map((p) => p.author_user_id))];
+
+  const [
+    { data: votes, error: votesError },
+    { data: comments, error: commentsError },
+    { data: profiles, error: profilesError },
+    viewerVotesResult,
+  ] = await Promise.all([
+    supabase.from("votes").select("post_id,vote_type").in("post_id", ids),
+    supabase
+      .from("comments")
+      .select("id,post_id,body,created_at,author_user_id")
+      .in("post_id", ids)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("id,display_name,avatar_url").in("id", authorIds),
+    viewerBrowserId
+      ? supabase
+          .from("votes")
+          .select("post_id")
+          .in("post_id", ids)
+          .eq("browser_id", viewerBrowserId)
+          .eq("vote_type", "up")
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (votesError) throw votesError;
+  if (commentsError) throw commentsError;
+  if (profilesError) throw profilesError;
+  if (viewerVotesResult.error) throw viewerVotesResult.error;
+
+  const profileMap = new Map<string, ProfileSummary>(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { displayName: p.display_name, avatarUrl: p.avatar_url ?? null },
+    ])
+  );
+  const viewerUpvotedPostIds = new Set(
+    (viewerVotesResult.data ?? []).map((vote) => vote.post_id)
+  );
+
+  const commentsByPost = new Map<string, CommentItem[]>();
+  (comments ?? []).forEach((c) => {
+    const arr = commentsByPost.get(c.post_id) ?? [];
+    arr.push({
+      id: c.id,
+      postId: c.post_id,
+      body: c.body,
+      authorName: profileMap.get(c.author_user_id)?.displayName ?? "unknown",
+      createdAt: c.created_at,
+    });
+    commentsByPost.set(c.post_id, arr);
+  });
+
+  const voteMap = new Map<string, { up: number; down: number }>();
+  (votes ?? []).forEach((v) => {
+    const agg = voteMap.get(v.post_id) ?? { up: 0, down: 0 };
+    if (v.vote_type === "up") agg.up += 1;
+    if (v.vote_type === "down") agg.down += 1;
+    voteMap.set(v.post_id, agg);
+  });
+
+  return posts.map((p) => {
+    const v = voteMap.get(p.id) ?? { up: 0, down: 0 };
+    const cmts = commentsByPost.get(p.id) ?? [];
+
+    return {
+      id: p.id,
+      remainingScore: p.remaining_score,
+      dartsLeft: p.darts_left,
+      outRule: p.out_rule,
+      bullMode: p.bull_mode,
+      routeTree: normalizeRouteTree(p.route_tree),
+      voteScore: v.up - v.down,
+      upCount: v.up,
+      downCount: v.down,
+      commentCount: cmts.length,
+      comments: cmts,
+      authorUserId: p.author_user_id,
+      authorName: profileMap.get(p.author_user_id)?.displayName ?? "unknown",
+      authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
+      createdAt: p.created_at,
+      viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
+      canManage: true,
+    };
+  });
+}
+
+export async function listUserPostScoreSummaries(
+  authorUserId: string
+): Promise<Array<{ score: number; count: number }>> {
+  if (useDemoData) {
+    const countByScore = new Map<number, number>();
+    demoPosts
+      .filter((post) => post.authorUserId === authorUserId)
+      .forEach((post) => {
+        countByScore.set(post.remainingScore, (countByScore.get(post.remainingScore) ?? 0) + 1);
+      });
+
+    return [...countByScore.entries()]
+      .sort(([scoreA], [scoreB]) => scoreA - scoreB)
+      .map(([score, count]) => ({ score, count }));
+  }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  const supabase = getSupabaseClient();
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("remaining_score")
+    .eq("author_user_id", authorUserId)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+
+  const countByScore = new Map<number, number>();
+  (posts ?? []).forEach((post) => {
+    countByScore.set(post.remaining_score, (countByScore.get(post.remaining_score) ?? 0) + 1);
+  });
+
+  return [...countByScore.entries()]
+    .sort(([scoreA], [scoreB]) => scoreA - scoreB)
+    .map(([score, count]) => ({ score, count }));
+}
+
 export async function createPost(input: {
   supabaseClient?: SupabaseClient;
   authorUserId: string;

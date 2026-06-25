@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { signOutAction } from "@/app/actions/auth-actions";
 
@@ -68,6 +69,9 @@ export function UserMenu({ displayName, email, avatarUrl }: UserMenuProps) {
             <span className="user-menu-name">{displayName}</span>
             {email ? <span className="user-menu-email">{email}</span> : null}
           </div>
+          <Link href="/me/posts" className="user-menu-item user-menu-link" role="menuitem">
+            自分の投稿
+          </Link>
           <form action={signOutAction}>
             <button type="submit" className="user-menu-item" role="menuitem">
               ログアウト
