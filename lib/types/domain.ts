@@ -45,6 +45,7 @@ export interface PostCardItem {
   authorAvatarUrl?: string | null;
   createdAt: string;
   viewerHasUpvoted?: boolean;
+  viewerHasBookmarked?: boolean;
   canManage?: boolean;
 }
 

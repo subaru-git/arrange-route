@@ -869,6 +869,13 @@ button {
   white-space: nowrap;
 }
 
+.post-card-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: end;
+  gap: 8px;
+}
+
 .helpful-reaction {
   position: relative;
   display: inline-flex;
@@ -986,6 +993,77 @@ button {
   color: var(--color-danger);
   font-size: 11px;
   font-weight: 650;
+}
+
+.bookmark-control-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bookmark-control {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: var(--color-surface-shell-1);
+  color: var(--color-text-secondary);
+  transition: transform 0.16s ease, color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.bookmark-control:hover {
+  color: var(--color-accent-strong);
+  background: var(--color-accent-soft);
+}
+
+.bookmark-control.bookmarked {
+  color: var(--color-accent-strong);
+  background: var(--color-accent-soft);
+}
+
+.bookmark-control:disabled {
+  cursor: default;
+}
+
+.bookmark-control.pending .bookmark-control-icon {
+  animation: bookmark-pop 0.62s ease-in-out infinite;
+}
+
+.bookmark-control-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: transparent;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+  transition: fill 0.16s ease, stroke 0.16s ease, transform 0.16s ease;
+}
+
+.bookmark-control.bookmarked .bookmark-control-icon {
+  fill: currentColor;
+  stroke: currentColor;
+  transform: scale(1.04);
+}
+
+.bookmark-control-error {
+  color: var(--color-danger);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+@keyframes bookmark-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.84);
+  }
 }
 
 .post-edit-trigger,

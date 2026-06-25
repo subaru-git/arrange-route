@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { signInWithGoogleAction } from "@/app/actions/auth-actions";
 import { PostCard } from "@/components/post-card";
 import { BROWSER_ID_COOKIE } from "@/lib/browser-id";
-import { listUserPosts } from "@/lib/repository";
+import { listUserBookmarkedPosts } from "@/lib/repository";
 import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -14,7 +14,7 @@ interface PageProps {
   params: { remaining_score: string };
 }
 
-export default async function MyPostsByScorePage({ params }: PageProps) {
+export default async function MyBookmarksByScorePage({ params }: PageProps) {
   const remainingScore = Number(params.remaining_score);
   if (!Number.isInteger(remainingScore) || remainingScore < 2 || remainingScore > 170) {
     notFound();
@@ -27,13 +27,13 @@ export default async function MyPostsByScorePage({ params }: PageProps) {
     return (
       <section className="my-posts-page">
         <header className="my-posts-header">
-          <p className="my-posts-kicker">My posts</p>
+          <p className="my-posts-kicker">Bookmarks</p>
           <h1>{remainingScore}</h1>
         </header>
         <div className="my-posts-empty">
-          <p>投稿一覧を見るにはログインしてください。</p>
+          <p>ブックマークを見るにはログインしてください。</p>
           <form action={signInWithGoogleAction}>
-            <input type="hidden" name="next" value={`/me/posts/${remainingScore}`} />
+            <input type="hidden" name="next" value={`/me/bookmarks/${remainingScore}`} />
             <button type="submit" className="auth-button">
               Googleでログイン
             </button>
@@ -44,20 +44,20 @@ export default async function MyPostsByScorePage({ params }: PageProps) {
   }
 
   const browserId = cookies().get(BROWSER_ID_COOKIE)?.value;
-  const posts = await listUserPosts(user.id, browserId, remainingScore, user.id, supabase);
+  const posts = await listUserBookmarkedPosts(user.id, browserId, remainingScore, supabase);
 
   return (
     <section className="my-posts-page">
       <header className="my-posts-header">
-        <p className="my-posts-kicker">My posts</p>
+        <p className="my-posts-kicker">Bookmarks</p>
         <div>
           <h1>{remainingScore}</h1>
           <p>{posts.length}件のアレンジ</p>
         </div>
       </header>
 
-      <Link href="/me/posts" className="my-posts-back-link">
-        自分の投稿一覧へ
+      <Link href="/me/bookmarks" className="my-posts-back-link">
+        ブックマーク一覧へ
       </Link>
 
       {posts.length > 0 ? (
@@ -68,9 +68,9 @@ export default async function MyPostsByScorePage({ params }: PageProps) {
         </div>
       ) : (
         <div className="my-posts-empty">
-          <p>この点数の投稿はありません。</p>
-          <Link href="/me/posts" className="new-route-link">
-            自分の投稿一覧へ
+          <p>この点数のブックマークはありません。</p>
+          <Link href="/me/bookmarks" className="new-route-link">
+            ブックマーク一覧へ
           </Link>
         </div>
       )}

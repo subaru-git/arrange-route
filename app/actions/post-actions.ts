@@ -6,9 +6,11 @@ import { redirect } from "next/navigation";
 import {
   createComment,
   createPost,
+  deleteBookmark,
   deletePost,
   deleteVote,
   updatePost,
+  upsertBookmark,
   upsertVote,
 } from "@/lib/repository";
 import { BROWSER_ID_COOKIE, BROWSER_ID_MAX_AGE } from "@/lib/browser-id";
@@ -228,6 +230,40 @@ export async function toggleHelpfulAction(formData: FormData) {
 
   revalidatePath(`/scores/${remainingScore}`);
   return { reacted: shouldReact };
+}
+
+export async function toggleBookmarkAction(formData: FormData) {
+  const postId = String(formData.get("post_id") ?? "");
+  const remainingScore = Number(formData.get("remaining_score"));
+  const shouldBookmark = formData.get("bookmarked") === "true";
+
+  if (!postId) throw new Error("投稿が見つかりません。");
+  if (!Number.isInteger(remainingScore) || remainingScore < 1 || remainingScore > 701) {
+    throw new Error("スコアが正しくありません。");
+  }
+  if (!hasSupabaseAuthConfig) throw new Error("ログインが必要です。");
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error("ログインが必要です。");
+
+  if (shouldBookmark) {
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: data.user.id,
+      display_name: getProfileDisplayName(data.user),
+      avatar_url: getProfileAvatarUrl(data.user),
+    });
+    if (profileError) throw profileError;
+
+    await upsertBookmark({ supabaseClient: supabase, postId, userId: data.user.id });
+  } else {
+    await deleteBookmark({ supabaseClient: supabase, postId, userId: data.user.id });
+  }
+
+  revalidatePath(`/scores/${remainingScore}`);
+  revalidatePath("/me/bookmarks");
+  revalidatePath(`/me/bookmarks/${remainingScore}`);
+  return { bookmarked: shouldBookmark };
 }
 
 export async function commentAction(formData: FormData) {

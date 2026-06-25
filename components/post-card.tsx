@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookmarkControl } from "@/components/bookmark-control";
 import { DeletePostControl } from "@/components/delete-post-control";
 import { HelpfulReaction } from "@/components/helpful-reaction";
 import { RouteDiagram } from "@/components/route-diagram";
@@ -48,12 +49,21 @@ export function PostCard({ post }: { post: PostCardItem }) {
           )}
           <span className="post-author-name">{post.authorName}</span>
         </div>
-        <HelpfulReaction
-          postId={post.id}
-          remainingScore={post.remainingScore}
-          count={post.upCount}
-          initialReacted={post.viewerHasUpvoted}
-        />
+        <div className="post-card-actions">
+          <HelpfulReaction
+            postId={post.id}
+            remainingScore={post.remainingScore}
+            count={post.upCount}
+            initialReacted={post.viewerHasUpvoted}
+          />
+          {post.viewerHasBookmarked !== undefined ? (
+            <BookmarkControl
+              postId={post.id}
+              remainingScore={post.remainingScore}
+              initialBookmarked={post.viewerHasBookmarked}
+            />
+          ) : null}
+        </div>
       </footer>
     </article>
   );
