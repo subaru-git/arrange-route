@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { syncProfileFromAuthUser } from "@/lib/profile-sync";
 import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -16,6 +17,14 @@ export async function GET(request: NextRequest) {
     const supabase = createServerSupabaseClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        try {
+          await syncProfileFromAuthUser(supabase, data.user);
+        } catch (profileError) {
+          console.error("Failed to sync profile from auth user", profileError);
+        }
+      }
       return NextResponse.redirect(new URL(next, requestUrl));
     }
   }

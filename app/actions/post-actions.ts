@@ -12,6 +12,7 @@ import {
   upsertVote,
 } from "@/lib/repository";
 import { BROWSER_ID_COOKIE, BROWSER_ID_MAX_AGE } from "@/lib/browser-id";
+import { getProfileAvatarUrl, getProfileDisplayName } from "@/lib/profile-sync";
 import { normalizeRouteTree } from "@/lib/route-tree";
 import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -50,13 +51,6 @@ function getJapanDatePasswordPrefix(date = new Date()) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}${values.month}${values.day}`;
-}
-
-function getDisplayName(user: { email?: string; user_metadata?: Record<string, unknown> }) {
-  const fullName = user.user_metadata?.full_name;
-  if (typeof fullName === "string" && fullName.trim()) return fullName.trim();
-  if (user.email) return user.email.split("@")[0] || user.email;
-  return "user";
 }
 
 function buildNewPostRedirect(input: {
@@ -105,7 +99,8 @@ export async function createPostAction(formData: FormData) {
   await createPost({
     supabaseClient: supabase,
     authorUserId: data.user.id,
-    authorName: getDisplayName(data.user),
+    authorName: getProfileDisplayName(data.user),
+    authorAvatarUrl: getProfileAvatarUrl(data.user),
     remainingScore,
     dartsLeft,
     outRule,

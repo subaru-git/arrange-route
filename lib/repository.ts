@@ -12,6 +12,11 @@ import {
   SortMode,
 } from "@/lib/types/domain";
 
+type ProfileSummary = {
+  displayName: string;
+  avatarUrl: string | null;
+};
+
 const demoNow = new Date().toISOString();
 
 declare global {
@@ -21,6 +26,8 @@ declare global {
 const demoVotes =
   globalThis.__arrangeWikiDemoVotes ??
   (globalThis.__arrangeWikiDemoVotes = new Map<string, "up" | "down">());
+
+const useDemoData = process.env.NODE_ENV === "development" && !hasSupabase;
 
 const demoPosts: PostCardItem[] = [
   {
@@ -443,7 +450,7 @@ export async function listPosts(
 ): Promise<PostCardItem[]> {
   const sort = query.sort ?? "popular";
 
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     return listDemoPosts(query, sort, viewerBrowserId);
   }
   if (!hasSupabase) {
@@ -484,7 +491,7 @@ export async function listPosts(
       .in("post_id", ids)
       .is("deleted_at", null)
       .order("created_at", { ascending: true }),
-    supabase.from("profiles").select("id,display_name").in("id", authorIds),
+    supabase.from("profiles").select("id,display_name,avatar_url").in("id", authorIds),
     viewerBrowserId
       ? supabase
           .from("votes")
@@ -499,7 +506,12 @@ export async function listPosts(
   if (profilesError) throw profilesError;
   if (viewerVotesResult.error) throw viewerVotesResult.error;
 
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const profileMap = new Map<string, ProfileSummary>(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { displayName: p.display_name, avatarUrl: p.avatar_url ?? null },
+    ])
+  );
   const viewerUpvotedPostIds = new Set(
     (viewerVotesResult.data ?? []).map((vote) => vote.post_id)
   );
@@ -511,7 +523,7 @@ export async function listPosts(
       id: c.id,
       postId: c.post_id,
       body: c.body,
-      authorName: profileMap.get(c.author_user_id) ?? "unknown",
+      authorName: profileMap.get(c.author_user_id)?.displayName ?? "unknown",
       createdAt: c.created_at,
     });
     commentsByPost.set(c.post_id, arr);
@@ -541,7 +553,8 @@ export async function listPosts(
       downCount: v.down,
       commentCount: cmts.length,
       comments: cmts,
-      authorName: profileMap.get(p.author_user_id) ?? "unknown",
+      authorName: profileMap.get(p.author_user_id)?.displayName ?? "unknown",
+      authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
       createdAt: p.created_at,
       viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
     };
@@ -554,6 +567,7 @@ export async function createPost(input: {
   supabaseClient?: SupabaseClient;
   authorUserId: string;
   authorName?: string;
+  authorAvatarUrl?: string | null;
   remainingScore: number;
   dartsLeft: number;
   outRule: OutRule;
@@ -561,7 +575,7 @@ export async function createPost(input: {
   routeTree: RouteTree;
   initialComment?: string;
 }) {
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     const id = randomUUID();
     const createdAt = new Date().toISOString();
 
@@ -588,6 +602,7 @@ export async function createPost(input: {
           ]
         : [],
       authorName: input.authorName ?? "demo_user",
+      authorAvatarUrl: input.authorAvatarUrl ?? null,
       createdAt,
     });
 
@@ -607,6 +622,7 @@ export async function createPost(input: {
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: input.authorUserId,
     display_name: input.authorName ?? "demo_user",
+    avatar_url: input.authorAvatarUrl ?? null,
   });
   if (profileError) throw profileError;
 
@@ -638,7 +654,7 @@ export async function createPost(input: {
 }
 
 export async function getPost(postId: string): Promise<PostCardItem | null> {
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     return demoPosts.find((post) => post.id === postId) ?? null;
   }
 
@@ -671,21 +687,29 @@ export async function getPost(postId: string): Promise<PostCardItem | null> {
       .eq("post_id", post.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: true }),
-    supabase.from("profiles").select("id,display_name").eq("id", post.author_user_id),
+    supabase
+      .from("profiles")
+      .select("id,display_name,avatar_url")
+      .eq("id", post.author_user_id),
   ]);
 
   if (votesError) throw votesError;
   if (commentsError) throw commentsError;
   if (profilesError) throw profilesError;
 
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const profileMap = new Map<string, ProfileSummary>(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { displayName: p.display_name, avatarUrl: p.avatar_url ?? null },
+    ])
+  );
   const upCount = (votes ?? []).filter((vote) => vote.vote_type === "up").length;
   const downCount = (votes ?? []).filter((vote) => vote.vote_type === "down").length;
   const commentItems: CommentItem[] = (comments ?? []).map((comment) => ({
     id: comment.id,
     postId: comment.post_id,
     body: comment.body,
-    authorName: profileMap.get(comment.author_user_id) ?? "unknown",
+    authorName: profileMap.get(comment.author_user_id)?.displayName ?? "unknown",
     createdAt: comment.created_at,
   }));
 
@@ -701,7 +725,8 @@ export async function getPost(postId: string): Promise<PostCardItem | null> {
     downCount,
     commentCount: commentItems.length,
     comments: commentItems,
-    authorName: profileMap.get(post.author_user_id) ?? "unknown",
+    authorName: profileMap.get(post.author_user_id)?.displayName ?? "unknown",
+    authorAvatarUrl: profileMap.get(post.author_user_id)?.avatarUrl ?? null,
     createdAt: post.created_at,
   };
 }
@@ -714,7 +739,7 @@ export async function updatePost(input: {
   bullMode: BullMode;
   routeTree: RouteTree;
 }) {
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     const post = demoPosts.find((item) => item.id === input.postId);
     if (!post) throw new Error("Post not found");
 
@@ -753,7 +778,7 @@ export async function updatePost(input: {
 }
 
 export async function deletePost(input: { postId: string; remainingScore: number }) {
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     const index = demoPosts.findIndex(
       (post) => post.id === input.postId && post.remainingScore === input.remainingScore
     );
@@ -788,7 +813,7 @@ export async function upsertVote(input: {
   userId?: string;
   browserId?: string;
 }) {
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     if (!demoPosts.some((item) => item.id === input.postId)) throw new Error("Post not found");
 
     const key = demoVoteKey(input);
@@ -844,7 +869,7 @@ export async function deleteVote(input: {
   userId?: string;
   browserId?: string;
 }) {
-  if (process.env.NODE_ENV === "development") {
+  if (useDemoData) {
     const key = demoVoteKey(input);
     demoVotes.delete(key);
     return;
