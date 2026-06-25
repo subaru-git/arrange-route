@@ -72,6 +72,9 @@ export function UserMenu({ displayName, email, avatarUrl }: UserMenuProps) {
           <Link href="/me/posts" className="user-menu-item user-menu-link" role="menuitem">
             自分の投稿
           </Link>
+          <Link href="/me/bookmarks" className="user-menu-item user-menu-link" role="menuitem">
+            ブックマーク
+          </Link>
           <form action={signOutAction}>
             <button type="submit" className="user-menu-item" role="menuitem">
               ログアウト

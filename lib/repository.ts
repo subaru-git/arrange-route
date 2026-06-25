@@ -21,11 +21,15 @@ const demoNow = new Date().toISOString();
 
 declare global {
   var __arrangeWikiDemoVotes: Map<string, "up" | "down"> | undefined;
+  var __arrangeWikiDemoBookmarks: Set<string> | undefined;
 }
 
 const demoVotes =
   globalThis.__arrangeWikiDemoVotes ??
   (globalThis.__arrangeWikiDemoVotes = new Map<string, "up" | "down">());
+const demoBookmarks =
+  globalThis.__arrangeWikiDemoBookmarks ??
+  (globalThis.__arrangeWikiDemoBookmarks = new Set<string>());
 
 const useDemoData = process.env.NODE_ENV === "development" && !hasSupabase;
 
@@ -403,7 +407,16 @@ function demoVoteKey(input: { postId: string; userId?: string; browserId?: strin
   return `${input.postId}:${voterId}`;
 }
 
-function listDemoPosts(query: ScoreQuery, sort: SortMode, viewerBrowserId?: string) {
+function demoBookmarkKey(input: { postId: string; userId: string }) {
+  return `${input.userId}:${input.postId}`;
+}
+
+function listDemoPosts(
+  query: ScoreQuery,
+  sort: SortMode,
+  viewerBrowserId?: string,
+  viewerUserId?: string
+) {
   const filtered = demoPosts.filter((p) => {
     if (p.remainingScore !== query.remainingScore) return false;
     if (query.outRule && p.outRule !== query.outRule) return false;
@@ -428,6 +441,9 @@ function listDemoPosts(query: ScoreQuery, sort: SortMode, viewerBrowserId?: stri
         viewerHasUpvoted: viewerBrowserId
           ? demoVotes.get(demoVoteKey({ postId: post.id, browserId: viewerBrowserId })) === "up"
           : false,
+        viewerHasBookmarked: viewerUserId
+          ? demoBookmarks.has(demoBookmarkKey({ postId: post.id, userId: viewerUserId }))
+          : undefined,
       };
     }),
     sort
@@ -447,18 +463,19 @@ function sortPosts(items: PostCardItem[], sort: SortMode) {
 export async function listPosts(
   query: ScoreQuery,
   viewerBrowserId?: string,
-  viewerUserId?: string
+  viewerUserId?: string,
+  supabaseClient?: SupabaseClient
 ): Promise<PostCardItem[]> {
   const sort = query.sort ?? "popular";
 
   if (useDemoData) {
-    return listDemoPosts(query, sort, viewerBrowserId);
+    return listDemoPosts(query, sort, viewerBrowserId, viewerUserId);
   }
   if (!hasSupabase) {
     throw new Error("Supabase env vars are required outside development");
   }
 
-  const supabase = getSupabaseClient();
+  const supabase = supabaseClient ?? getSupabaseClient();
 
   let q = supabase
     .from("posts")
@@ -484,6 +501,7 @@ export async function listPosts(
     { data: comments, error: commentsError },
     { data: profiles, error: profilesError },
     viewerVotesResult,
+    viewerBookmarksResult,
   ] = await Promise.all([
     supabase.from("votes").select("post_id,vote_type").in("post_id", ids),
     supabase
@@ -501,11 +519,19 @@ export async function listPosts(
           .eq("browser_id", viewerBrowserId)
           .eq("vote_type", "up")
       : Promise.resolve({ data: [], error: null }),
+    viewerUserId
+      ? supabase
+          .from("bookmarks")
+          .select("post_id")
+          .in("post_id", ids)
+          .eq("user_id", viewerUserId)
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (votesError) throw votesError;
   if (commentsError) throw commentsError;
   if (profilesError) throw profilesError;
   if (viewerVotesResult.error) throw viewerVotesResult.error;
+  if (viewerBookmarksResult.error) throw viewerBookmarksResult.error;
 
   const profileMap = new Map<string, ProfileSummary>(
     (profiles ?? []).map((p) => [
@@ -515,6 +541,9 @@ export async function listPosts(
   );
   const viewerUpvotedPostIds = new Set(
     (viewerVotesResult.data ?? []).map((vote) => vote.post_id)
+  );
+  const viewerBookmarkedPostIds = new Set(
+    (viewerBookmarksResult.data ?? []).map((bookmark) => bookmark.post_id)
   );
 
   const commentsByPost = new Map<string, CommentItem[]>();
@@ -559,6 +588,7 @@ export async function listPosts(
       authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
       createdAt: p.created_at,
       viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
+      viewerHasBookmarked: viewerUserId ? viewerBookmarkedPostIds.has(p.id) : undefined,
       canManage: viewerUserId === p.author_user_id,
     };
   });
@@ -569,7 +599,9 @@ export async function listPosts(
 export async function listUserPosts(
   authorUserId: string,
   viewerBrowserId?: string,
-  remainingScore?: number
+  remainingScore?: number,
+  viewerUserId?: string,
+  supabaseClient?: SupabaseClient
 ): Promise<PostCardItem[]> {
   if (useDemoData) {
     return sortPosts(
@@ -585,6 +617,9 @@ export async function listUserPosts(
           viewerHasUpvoted: viewerBrowserId
             ? demoVotes.get(`${viewerBrowserId}:${post.id}`) === "up"
             : false,
+          viewerHasBookmarked: viewerUserId
+            ? demoBookmarks.has(demoBookmarkKey({ postId: post.id, userId: viewerUserId }))
+            : undefined,
         })),
       "latest"
     );
@@ -593,7 +628,7 @@ export async function listUserPosts(
     throw new Error("Supabase env vars are required outside development");
   }
 
-  const supabase = getSupabaseClient();
+  const supabase = supabaseClient ?? getSupabaseClient();
   let q = supabase
     .from("posts")
     .select(
@@ -613,6 +648,255 @@ export async function listUserPosts(
   const ids = posts.map((p) => p.id);
   const authorIds = [...new Set(posts.map((p) => p.author_user_id))];
 
+  const [
+    { data: votes, error: votesError },
+    { data: comments, error: commentsError },
+    { data: profiles, error: profilesError },
+    viewerVotesResult,
+    viewerBookmarksResult,
+  ] = await Promise.all([
+    supabase.from("votes").select("post_id,vote_type").in("post_id", ids),
+    supabase
+      .from("comments")
+      .select("id,post_id,body,created_at,author_user_id")
+      .in("post_id", ids)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("id,display_name,avatar_url").in("id", authorIds),
+    viewerBrowserId
+      ? supabase
+          .from("votes")
+          .select("post_id")
+          .in("post_id", ids)
+          .eq("browser_id", viewerBrowserId)
+          .eq("vote_type", "up")
+      : Promise.resolve({ data: [], error: null }),
+    viewerUserId
+      ? supabase
+          .from("bookmarks")
+          .select("post_id")
+          .in("post_id", ids)
+          .eq("user_id", viewerUserId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (votesError) throw votesError;
+  if (commentsError) throw commentsError;
+  if (profilesError) throw profilesError;
+  if (viewerVotesResult.error) throw viewerVotesResult.error;
+  if (viewerBookmarksResult.error) throw viewerBookmarksResult.error;
+
+  const profileMap = new Map<string, ProfileSummary>(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { displayName: p.display_name, avatarUrl: p.avatar_url ?? null },
+    ])
+  );
+  const viewerUpvotedPostIds = new Set(
+    (viewerVotesResult.data ?? []).map((vote) => vote.post_id)
+  );
+  const viewerBookmarkedPostIds = new Set(
+    (viewerBookmarksResult.data ?? []).map((bookmark) => bookmark.post_id)
+  );
+
+  const commentsByPost = new Map<string, CommentItem[]>();
+  (comments ?? []).forEach((c) => {
+    const arr = commentsByPost.get(c.post_id) ?? [];
+    arr.push({
+      id: c.id,
+      postId: c.post_id,
+      body: c.body,
+      authorName: profileMap.get(c.author_user_id)?.displayName ?? "unknown",
+      createdAt: c.created_at,
+    });
+    commentsByPost.set(c.post_id, arr);
+  });
+
+  const voteMap = new Map<string, { up: number; down: number }>();
+  (votes ?? []).forEach((v) => {
+    const agg = voteMap.get(v.post_id) ?? { up: 0, down: 0 };
+    if (v.vote_type === "up") agg.up += 1;
+    if (v.vote_type === "down") agg.down += 1;
+    voteMap.set(v.post_id, agg);
+  });
+
+  return posts.map((p) => {
+    const v = voteMap.get(p.id) ?? { up: 0, down: 0 };
+    const cmts = commentsByPost.get(p.id) ?? [];
+
+    return {
+      id: p.id,
+      remainingScore: p.remaining_score,
+      dartsLeft: p.darts_left,
+      outRule: p.out_rule,
+      bullMode: p.bull_mode,
+      routeTree: normalizeRouteTree(p.route_tree),
+      voteScore: v.up - v.down,
+      upCount: v.up,
+      downCount: v.down,
+      commentCount: cmts.length,
+      comments: cmts,
+      authorUserId: p.author_user_id,
+      authorName: profileMap.get(p.author_user_id)?.displayName ?? "unknown",
+      authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
+      createdAt: p.created_at,
+      viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
+      viewerHasBookmarked: viewerUserId ? viewerBookmarkedPostIds.has(p.id) : undefined,
+      canManage: true,
+    };
+  });
+}
+
+export async function listUserPostScoreSummaries(
+  authorUserId: string
+): Promise<Array<{ score: number; count: number }>> {
+  if (useDemoData) {
+    const countByScore = new Map<number, number>();
+    demoPosts
+      .filter((post) => post.authorUserId === authorUserId)
+      .forEach((post) => {
+        countByScore.set(post.remainingScore, (countByScore.get(post.remainingScore) ?? 0) + 1);
+      });
+
+    return [...countByScore.entries()]
+      .sort(([scoreA], [scoreB]) => scoreA - scoreB)
+      .map(([score, count]) => ({ score, count }));
+  }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  const supabase = getSupabaseClient();
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("remaining_score")
+    .eq("author_user_id", authorUserId)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+
+  const countByScore = new Map<number, number>();
+  (posts ?? []).forEach((post) => {
+    countByScore.set(post.remaining_score, (countByScore.get(post.remaining_score) ?? 0) + 1);
+  });
+
+  return [...countByScore.entries()]
+    .sort(([scoreA], [scoreB]) => scoreA - scoreB)
+    .map(([score, count]) => ({ score, count }));
+}
+
+export async function listUserBookmarkScoreSummaries(
+  userId: string,
+  supabaseClient?: SupabaseClient
+): Promise<Array<{ score: number; count: number }>> {
+  if (useDemoData) {
+    const bookmarkedIds = new Set(
+      [...demoBookmarks]
+        .filter((key) => key.startsWith(`${userId}:`))
+        .map((key) => key.slice(userId.length + 1))
+    );
+    const countByScore = new Map<number, number>();
+    demoPosts
+      .filter((post) => bookmarkedIds.has(post.id))
+      .forEach((post) => {
+        countByScore.set(post.remainingScore, (countByScore.get(post.remainingScore) ?? 0) + 1);
+      });
+
+    return [...countByScore.entries()]
+      .sort(([scoreA], [scoreB]) => scoreA - scoreB)
+      .map(([score, count]) => ({ score, count }));
+  }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  const supabase = supabaseClient ?? getSupabaseClient();
+  const { data: bookmarks, error: bookmarksError } = await supabase
+    .from("bookmarks")
+    .select("post_id")
+    .eq("user_id", userId);
+  if (bookmarksError) throw bookmarksError;
+  if (!bookmarks || bookmarks.length === 0) return [];
+
+  const postIds = bookmarks.map((bookmark) => bookmark.post_id);
+  const { data: posts, error: postsError } = await supabase
+    .from("posts")
+    .select("remaining_score")
+    .in("id", postIds)
+    .is("deleted_at", null);
+  if (postsError) throw postsError;
+
+  const countByScore = new Map<number, number>();
+  (posts ?? []).forEach((post) => {
+    countByScore.set(post.remaining_score, (countByScore.get(post.remaining_score) ?? 0) + 1);
+  });
+
+  return [...countByScore.entries()]
+    .sort(([scoreA], [scoreB]) => scoreA - scoreB)
+    .map(([score, count]) => ({ score, count }));
+}
+
+export async function listUserBookmarkedPosts(
+  userId: string,
+  viewerBrowserId?: string,
+  remainingScore?: number,
+  supabaseClient?: SupabaseClient
+): Promise<PostCardItem[]> {
+  if (useDemoData) {
+    const bookmarkedIds = new Set(
+      [...demoBookmarks]
+        .filter((key) => key.startsWith(`${userId}:`))
+        .map((key) => key.slice(userId.length + 1))
+    );
+
+    return sortPosts(
+      demoPosts
+        .filter(
+          (post) =>
+            bookmarkedIds.has(post.id) &&
+            (remainingScore === undefined || post.remainingScore === remainingScore)
+        )
+        .map((post) => ({
+          ...post,
+          viewerHasUpvoted: viewerBrowserId
+            ? demoVotes.get(demoVoteKey({ postId: post.id, browserId: viewerBrowserId })) === "up"
+            : false,
+          viewerHasBookmarked: true,
+          canManage: post.authorUserId === userId,
+        })),
+      "latest"
+    );
+  }
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+
+  const supabase = supabaseClient ?? getSupabaseClient();
+  const { data: bookmarks, error: bookmarksError } = await supabase
+    .from("bookmarks")
+    .select("post_id,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (bookmarksError) throw bookmarksError;
+  if (!bookmarks || bookmarks.length === 0) return [];
+
+  const bookmarkedPostIds = bookmarks.map((bookmark) => bookmark.post_id);
+  let q = supabase
+    .from("posts")
+    .select(
+      "id,author_user_id,remaining_score,darts_left,out_rule,bull_mode,route_tree,created_at"
+    )
+    .in("id", bookmarkedPostIds)
+    .is("deleted_at", null);
+
+  if (remainingScore !== undefined) q = q.eq("remaining_score", remainingScore);
+
+  const { data: posts, error: postsError } = await q;
+  if (postsError) throw postsError;
+  if (!posts || posts.length === 0) return [];
+
+  const ids = posts.map((p) => p.id);
+  const authorIds = [...new Set(posts.map((p) => p.author_user_id))];
   const [
     { data: votes, error: votesError },
     { data: comments, error: commentsError },
@@ -673,68 +957,35 @@ export async function listUserPosts(
     voteMap.set(v.post_id, agg);
   });
 
-  return posts.map((p) => {
-    const v = voteMap.get(p.id) ?? { up: 0, down: 0 };
-    const cmts = commentsByPost.get(p.id) ?? [];
+  const bookmarkOrder = new Map(bookmarks.map((bookmark, index) => [bookmark.post_id, index]));
 
-    return {
-      id: p.id,
-      remainingScore: p.remaining_score,
-      dartsLeft: p.darts_left,
-      outRule: p.out_rule,
-      bullMode: p.bull_mode,
-      routeTree: normalizeRouteTree(p.route_tree),
-      voteScore: v.up - v.down,
-      upCount: v.up,
-      downCount: v.down,
-      commentCount: cmts.length,
-      comments: cmts,
-      authorUserId: p.author_user_id,
-      authorName: profileMap.get(p.author_user_id)?.displayName ?? "unknown",
-      authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
-      createdAt: p.created_at,
-      viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
-      canManage: true,
-    };
-  });
-}
+  return posts
+    .map((p) => {
+      const v = voteMap.get(p.id) ?? { up: 0, down: 0 };
+      const cmts = commentsByPost.get(p.id) ?? [];
 
-export async function listUserPostScoreSummaries(
-  authorUserId: string
-): Promise<Array<{ score: number; count: number }>> {
-  if (useDemoData) {
-    const countByScore = new Map<number, number>();
-    demoPosts
-      .filter((post) => post.authorUserId === authorUserId)
-      .forEach((post) => {
-        countByScore.set(post.remainingScore, (countByScore.get(post.remainingScore) ?? 0) + 1);
-      });
-
-    return [...countByScore.entries()]
-      .sort(([scoreA], [scoreB]) => scoreA - scoreB)
-      .map(([score, count]) => ({ score, count }));
-  }
-  if (!hasSupabase) {
-    throw new Error("Supabase env vars are required outside development");
-  }
-
-  const supabase = getSupabaseClient();
-  const { data: posts, error } = await supabase
-    .from("posts")
-    .select("remaining_score")
-    .eq("author_user_id", authorUserId)
-    .is("deleted_at", null);
-
-  if (error) throw error;
-
-  const countByScore = new Map<number, number>();
-  (posts ?? []).forEach((post) => {
-    countByScore.set(post.remaining_score, (countByScore.get(post.remaining_score) ?? 0) + 1);
-  });
-
-  return [...countByScore.entries()]
-    .sort(([scoreA], [scoreB]) => scoreA - scoreB)
-    .map(([score, count]) => ({ score, count }));
+      return {
+        id: p.id,
+        remainingScore: p.remaining_score,
+        dartsLeft: p.darts_left,
+        outRule: p.out_rule,
+        bullMode: p.bull_mode,
+        routeTree: normalizeRouteTree(p.route_tree),
+        voteScore: v.up - v.down,
+        upCount: v.up,
+        downCount: v.down,
+        commentCount: cmts.length,
+        comments: cmts,
+        authorUserId: p.author_user_id,
+        authorName: profileMap.get(p.author_user_id)?.displayName ?? "unknown",
+        authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
+        createdAt: p.created_at,
+        viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
+        viewerHasBookmarked: true,
+        canManage: p.author_user_id === userId,
+      };
+    })
+    .sort((a, b) => (bookmarkOrder.get(a.id) ?? 0) - (bookmarkOrder.get(b.id) ?? 0));
 }
 
 export async function createPost(input: {
@@ -1100,6 +1351,55 @@ export async function deleteVote(input: {
     .eq("post_id", input.postId)
     .eq("browser_id", input.browserId);
 
+  if (error) throw error;
+}
+
+export async function upsertBookmark(input: {
+  supabaseClient?: SupabaseClient;
+  postId: string;
+  userId: string;
+}) {
+  if (useDemoData) {
+    if (!demoPosts.some((item) => item.id === input.postId)) throw new Error("Post not found");
+    demoBookmarks.add(demoBookmarkKey(input));
+    return;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+  const supabase = input.supabaseClient ?? getSupabaseClient();
+
+  const { error } = await supabase.from("bookmarks").upsert(
+    {
+      post_id: input.postId,
+      user_id: input.userId,
+    },
+    { onConflict: "user_id,post_id" }
+  );
+  if (error) throw error;
+}
+
+export async function deleteBookmark(input: {
+  supabaseClient?: SupabaseClient;
+  postId: string;
+  userId: string;
+}) {
+  if (useDemoData) {
+    demoBookmarks.delete(demoBookmarkKey(input));
+    return;
+  }
+
+  if (!hasSupabase) {
+    throw new Error("Supabase env vars are required outside development");
+  }
+  const supabase = input.supabaseClient ?? getSupabaseClient();
+
+  const { error } = await supabase
+    .from("bookmarks")
+    .delete()
+    .eq("post_id", input.postId)
+    .eq("user_id", input.userId);
   if (error) throw error;
 }
 

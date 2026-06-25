@@ -53,13 +53,13 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
   const bullMode = normalizeBullMode(searchParams.bull_mode);
 
   const browserId = cookies().get(BROWSER_ID_COOKIE)?.value;
-  const viewerUserId = hasSupabaseAuthConfig
-    ? (await createServerSupabaseClient().auth.getUser()).data.user?.id
-    : undefined;
+  const supabase = hasSupabaseAuthConfig ? createServerSupabaseClient() : undefined;
+  const viewerUserId = supabase ? (await supabase.auth.getUser()).data.user?.id : undefined;
   const posts = await listPosts(
     { remainingScore, outRule, bullMode, sort: "latest" },
     browserId,
-    viewerUserId
+    viewerUserId,
+    supabase
   );
 
   return (
