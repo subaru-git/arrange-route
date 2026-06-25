@@ -42,17 +42,6 @@ function getDemoUserId() {
   return process.env.DEMO_USER_ID ?? "00000000-0000-0000-0000-000000000001";
 }
 
-function getJapanDatePasswordPrefix(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}${values.month}${values.day}`;
-}
-
 function buildNewPostRedirect(input: {
   remainingScore: number;
   outRule: OutRule;
@@ -122,8 +111,6 @@ export async function editPostAction(formData: FormData) {
   const outRule = String(formData.get("out_rule")) as OutRule;
   const bullMode = String(formData.get("bull_mode")) as BullMode;
   const routeTreeJson = String(formData.get("route_tree_json") ?? "");
-  const password = String(formData.get("password") ?? "");
-  const editPassword = `${getJapanDatePasswordPrefix()}${originalRemainingScore}`;
 
   if (!postId) throw new Error("投稿が見つかりません。");
   if (
@@ -133,7 +120,11 @@ export async function editPostAction(formData: FormData) {
   ) {
     throw new Error("元のスコアが正しくありません。");
   }
-  if (password !== editPassword) throw new Error("パスワードが違います。");
+  if (!hasSupabaseAuthConfig) throw new Error("ログインが必要です。");
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error("ログインが必要です。");
 
   let parsed: unknown = null;
   if (routeTreeJson) {
@@ -145,14 +136,20 @@ export async function editPostAction(formData: FormData) {
   }
   const routeTree: RouteTree = normalizeRouteTree(parsed);
 
-  await updatePost({
-    postId,
-    remainingScore,
-    dartsLeft,
-    outRule,
-    bullMode,
-    routeTree,
-  });
+  try {
+    await updatePost({
+      supabaseClient: supabase,
+      authorUserId: data.user.id,
+      postId,
+      remainingScore,
+      dartsLeft,
+      outRule,
+      bullMode,
+      routeTree,
+    });
+  } catch {
+    throw new Error("この投稿は編集できません。");
+  }
 
   revalidatePath("/scores");
   revalidatePath(`/scores/${originalRemainingScore}`);
@@ -166,8 +163,6 @@ export async function deletePostAction(
 ): Promise<DeletePostActionState> {
   const postId = String(formData.get("post_id") ?? "");
   const remainingScore = Number(formData.get("remaining_score"));
-  const password = String(formData.get("password") ?? "");
-  const deletePassword = `${getJapanDatePasswordPrefix()}${remainingScore}`;
 
   if (!postId) {
     return { ok: false, message: "投稿が見つかりません。" };
@@ -177,12 +172,27 @@ export async function deletePostAction(
     return { ok: false, message: "スコアが正しくありません。" };
   }
 
-  if (password !== deletePassword) {
-    return { ok: false, message: "パスワードが違います。" };
+  if (!hasSupabaseAuthConfig) {
+    return { ok: false, message: "ログインが必要です。" };
   }
 
-  await deletePost({ postId, remainingScore });
-  return { ok: true };
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    return { ok: false, message: "ログインが必要です。" };
+  }
+
+  try {
+    await deletePost({
+      supabaseClient: supabase,
+      authorUserId: data.user.id,
+      postId,
+      remainingScore,
+    });
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "この投稿は削除できません。" };
+  }
 }
 
 export async function voteAction(formData: FormData) {

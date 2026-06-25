@@ -446,7 +446,8 @@ function sortPosts(items: PostCardItem[], sort: SortMode) {
 
 export async function listPosts(
   query: ScoreQuery,
-  viewerBrowserId?: string
+  viewerBrowserId?: string,
+  viewerUserId?: string
 ): Promise<PostCardItem[]> {
   const sort = query.sort ?? "popular";
 
@@ -553,10 +554,12 @@ export async function listPosts(
       downCount: v.down,
       commentCount: cmts.length,
       comments: cmts,
+      authorUserId: p.author_user_id,
       authorName: profileMap.get(p.author_user_id)?.displayName ?? "unknown",
       authorAvatarUrl: profileMap.get(p.author_user_id)?.avatarUrl ?? null,
       createdAt: p.created_at,
       viewerHasUpvoted: viewerUpvotedPostIds.has(p.id),
+      canManage: viewerUserId === p.author_user_id,
     };
   });
 
@@ -601,6 +604,7 @@ export async function createPost(input: {
             },
           ]
         : [],
+      authorUserId: input.authorUserId,
       authorName: input.authorName ?? "demo_user",
       authorAvatarUrl: input.authorAvatarUrl ?? null,
       createdAt,
@@ -725,6 +729,7 @@ export async function getPost(postId: string): Promise<PostCardItem | null> {
     downCount,
     commentCount: commentItems.length,
     comments: commentItems,
+    authorUserId: post.author_user_id,
     authorName: profileMap.get(post.author_user_id)?.displayName ?? "unknown",
     authorAvatarUrl: profileMap.get(post.author_user_id)?.avatarUrl ?? null,
     createdAt: post.created_at,
@@ -732,6 +737,8 @@ export async function getPost(postId: string): Promise<PostCardItem | null> {
 }
 
 export async function updatePost(input: {
+  supabaseClient?: SupabaseClient;
+  authorUserId?: string;
   postId: string;
   remainingScore: number;
   dartsLeft: number;
@@ -740,7 +747,11 @@ export async function updatePost(input: {
   routeTree: RouteTree;
 }) {
   if (useDemoData) {
-    const post = demoPosts.find((item) => item.id === input.postId);
+    const post = demoPosts.find(
+      (item) =>
+        item.id === input.postId &&
+        (!input.authorUserId || item.authorUserId === input.authorUserId)
+    );
     if (!post) throw new Error("Post not found");
 
     post.remainingScore = input.remainingScore;
@@ -755,32 +766,48 @@ export async function updatePost(input: {
     throw new Error("Supabase env vars are required outside development");
   }
 
-  if (!hasSupabaseAdmin) {
+  if (!input.supabaseClient && !hasSupabaseAdmin) {
     throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_KEY is required to edit posts"
+      "Authenticated Supabase client or service role key is required to edit posts"
     );
   }
 
-  const supabase = getSupabaseClient({ admin: true });
-  const { error } = await supabase
+  const supabase = input.supabaseClient ?? getSupabaseClient({ admin: true });
+  let q = supabase
     .from("posts")
-    .update({
-      remaining_score: input.remainingScore,
-      darts_left: input.dartsLeft,
-      out_rule: input.outRule,
-      bull_mode: input.bullMode,
-      route_tree: input.routeTree,
-    })
+    .update(
+      {
+        remaining_score: input.remainingScore,
+        darts_left: input.dartsLeft,
+        out_rule: input.outRule,
+        bull_mode: input.bullMode,
+        route_tree: input.routeTree,
+      },
+      { count: "exact" }
+    )
     .eq("id", input.postId)
     .is("deleted_at", null);
 
+  if (input.authorUserId) q = q.eq("author_user_id", input.authorUserId);
+
+  const { error, count } = await q;
+
   if (error) throw error;
+  if (count === 0) throw new Error("Post not found or not owned by user");
 }
 
-export async function deletePost(input: { postId: string; remainingScore: number }) {
+export async function deletePost(input: {
+  supabaseClient?: SupabaseClient;
+  authorUserId?: string;
+  postId: string;
+  remainingScore: number;
+}) {
   if (useDemoData) {
     const index = demoPosts.findIndex(
-      (post) => post.id === input.postId && post.remainingScore === input.remainingScore
+      (post) =>
+        post.id === input.postId &&
+        post.remainingScore === input.remainingScore &&
+        (!input.authorUserId || post.authorUserId === input.authorUserId)
     );
     if (index >= 0) demoPosts.splice(index, 1);
     return;
@@ -790,21 +817,26 @@ export async function deletePost(input: { postId: string; remainingScore: number
     throw new Error("Supabase env vars are required outside development");
   }
 
-  if (!hasSupabaseAdmin) {
+  if (!input.supabaseClient && !hasSupabaseAdmin) {
     throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, or SUPABASE_SERVICE_KEY is required to delete posts"
+      "Authenticated Supabase client or service role key is required to delete posts"
     );
   }
 
-  const supabase = getSupabaseClient({ admin: true });
-  const { error } = await supabase
+  const supabase = input.supabaseClient ?? getSupabaseClient({ admin: true });
+  let q = supabase
     .from("posts")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
     .eq("id", input.postId)
     .eq("remaining_score", input.remainingScore)
     .is("deleted_at", null);
 
+  if (input.authorUserId) q = q.eq("author_user_id", input.authorUserId);
+
+  const { error, count } = await q;
+
   if (error) throw error;
+  if (count === 0) throw new Error("Post not found or not owned by user");
 }
 
 export async function upsertVote(input: {

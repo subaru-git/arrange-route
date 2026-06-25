@@ -40,10 +40,12 @@ export interface PostCardItem {
   downCount: number;
   commentCount: number;
   comments: CommentItem[];
+  authorUserId?: string;
   authorName: string;
   authorAvatarUrl?: string | null;
   createdAt: string;
   viewerHasUpvoted?: boolean;
+  canManage?: boolean;
 }
 
 export interface ScoreQuery {

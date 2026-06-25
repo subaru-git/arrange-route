@@ -366,17 +366,12 @@ export function NewPostForm({
         </section>
       ) : null}
 
-      {isEditMode ? (
-        <label className="edit-password-field">
-          <span>編集パスワード</span>
-          <input type="password" name="password" autoComplete="current-password" required />
-        </label>
-      ) : (
+      {!isEditMode ? (
         <details className="new-form-note">
           <summary>メモを追加（任意）</summary>
           <textarea name="comment" rows={2} />
         </details>
-      )}
+      ) : null}
 
       <p className={canSubmit ? "save-status ready" : "save-status"}>{saveMessage}</p>
       <SaveSubmitButton canSubmit={canSubmit} label={submitLabel} />
