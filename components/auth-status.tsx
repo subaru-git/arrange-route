@@ -1,12 +1,19 @@
-import { signInWithGoogleAction, signOutAction } from "@/app/actions/auth-actions";
+import { signInWithGoogleAction } from "@/app/actions/auth-actions";
 import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { UserMenu } from "@/components/user-menu";
 
 function getDisplayName(user: { email?: string; user_metadata?: Record<string, unknown> }) {
   const fullName = user.user_metadata?.full_name;
   if (typeof fullName === "string" && fullName.trim()) return fullName.trim();
   if (user.email) return user.email;
   return "ログイン中";
+}
+
+function getAvatarUrl(user: { user_metadata?: Record<string, unknown> }) {
+  const avatarUrl = user.user_metadata?.avatar_url ?? user.user_metadata?.picture;
+  if (typeof avatarUrl === "string" && avatarUrl.trim()) return avatarUrl.trim();
+  return null;
 }
 
 export async function AuthStatus() {
@@ -31,12 +38,7 @@ export async function AuthStatus() {
 
   return (
     <div className="auth-status signed-in">
-      <span>{getDisplayName(user)}</span>
-      <form action={signOutAction}>
-        <button type="submit" className="auth-button secondary">
-          ログアウト
-        </button>
-      </form>
+      <UserMenu displayName={getDisplayName(user)} email={user.email} avatarUrl={getAvatarUrl(user)} />
     </div>
   );
 }
