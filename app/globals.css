@@ -148,6 +148,116 @@ a:hover {
   color: var(--color-text-secondary);
 }
 
+.user-menu {
+  position: relative;
+}
+
+.user-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgb(83 112 108 / 14%);
+  border-radius: 50%;
+  padding: 0;
+  background: #ffffff;
+  box-shadow: 0 7px 16px var(--elevation-1);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.user-menu-trigger:hover,
+.user-menu.open .user-menu-trigger {
+  border-color: rgb(8 127 109 / 34%);
+  box-shadow: 0 9px 20px var(--elevation-2);
+}
+
+.user-menu-trigger:hover {
+  transform: translateY(-1px);
+}
+
+.user-menu-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-menu-avatar.fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.user-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  display: grid;
+  gap: 6px;
+  width: min(260px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid rgb(83 112 108 / 14%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 18px 40px rgb(34 63 62 / 17%);
+  backdrop-filter: blur(14px);
+}
+
+.user-menu-account {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 9px 10px;
+  border-bottom: 1px solid rgb(83 112 108 / 10%);
+}
+
+.user-menu-name,
+.user-menu-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-name {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.user-menu-email {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 9px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 750;
+  text-align: left;
+}
+
+.user-menu-item:hover,
+.user-menu-item:focus-visible {
+  background: rgb(184 52 39 / 8%);
+}
+
 .container {
   max-width: 880px;
   margin: 0 auto;
