@@ -16,7 +16,7 @@ interface PageProps {
 
 export default async function MyPostsByScorePage({ params }: PageProps) {
   const remainingScore = Number(params.remaining_score);
-  if (!Number.isInteger(remainingScore) || remainingScore < 2 || remainingScore > 170) {
+  if (!Number.isInteger(remainingScore) || remainingScore < 1 || remainingScore > 701) {
     notFound();
   }
 
