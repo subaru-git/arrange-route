@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { signOutAction } from "@/app/actions/auth-actions";
 
@@ -19,6 +20,7 @@ export function UserMenu({ displayName, email, avatarUrl }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const pathname = usePathname();
   const initial = getInitial(displayName, email);
 
   useEffect(() => {
@@ -29,6 +31,10 @@ export function UserMenu({ displayName, email, avatarUrl }: UserMenuProps) {
     document.addEventListener("mousedown", closeOnOutsideClick);
     return () => document.removeEventListener("mousedown", closeOnOutsideClick);
   }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     if (event.key === "Escape") {
@@ -69,10 +75,15 @@ export function UserMenu({ displayName, email, avatarUrl }: UserMenuProps) {
             <span className="user-menu-name">{displayName}</span>
             {email ? <span className="user-menu-email">{email}</span> : null}
           </div>
-          <Link href="/me/posts" className="user-menu-item user-menu-link" role="menuitem">
+          <Link href="/me/posts" className="user-menu-item user-menu-link" role="menuitem" onClick={() => setOpen(false)}>
             自分の投稿
           </Link>
-          <Link href="/me/bookmarks" className="user-menu-item user-menu-link" role="menuitem">
+          <Link
+            href="/me/bookmarks"
+            className="user-menu-item user-menu-link"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
             ブックマーク
           </Link>
           <form action={signOutAction}>
