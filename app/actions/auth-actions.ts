@@ -11,20 +11,37 @@ function normalizeNext(value: FormDataEntryValue | string | null | undefined) {
   return next;
 }
 
+function isLocalhostOrigin(origin: string) {
+  try {
+    const hostname = new URL(origin).hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
+function getVercelOrigin() {
+  const vercelUrl =
+    process.env.VERCEL_BRANCH_URL ?? process.env.VERCEL_URL ?? process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (!vercelUrl) return null;
+  return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+}
+
 function getOrigin() {
   const headerStore = headers();
+  const vercelOrigin = getVercelOrigin();
   const explicitOrigin = headerStore.get("origin");
-  if (explicitOrigin) return explicitOrigin;
+  if (explicitOrigin && (!isLocalhostOrigin(explicitOrigin) || !vercelOrigin)) return explicitOrigin;
 
   const forwardedHost = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
   if (forwardedHost) {
     const forwardedProto =
       headerStore.get("x-forwarded-proto") ?? (forwardedHost.startsWith("localhost") ? "http" : "https");
-    return `${forwardedProto}://${forwardedHost}`;
+    const forwardedOrigin = `${forwardedProto}://${forwardedHost}`;
+    if (!isLocalhostOrigin(forwardedOrigin) || !vercelOrigin) return forwardedOrigin;
   }
 
-  const vercelUrl = process.env.VERCEL_URL ?? process.env.NEXT_PUBLIC_VERCEL_URL;
-  if (vercelUrl) return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+  if (vercelOrigin) return vercelOrigin;
 
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
