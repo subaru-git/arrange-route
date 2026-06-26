@@ -13,12 +13,20 @@ function normalizeNext(value: FormDataEntryValue | string | null | undefined) {
 
 function getOrigin() {
   const headerStore = headers();
-  return (
-    headerStore.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    process.env.VERCEL_URL?.replace(/^/, "https://") ??
-    "http://localhost:3000"
-  );
+  const explicitOrigin = headerStore.get("origin");
+  if (explicitOrigin) return explicitOrigin;
+
+  const forwardedHost = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  if (forwardedHost) {
+    const forwardedProto =
+      headerStore.get("x-forwarded-proto") ?? (forwardedHost.startsWith("localhost") ? "http" : "https");
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  const vercelUrl = process.env.VERCEL_URL ?? process.env.NEXT_PUBLIC_VERCEL_URL;
+  if (vercelUrl) return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
 export async function signInWithGoogleAction(formData?: FormData) {
