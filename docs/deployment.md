@@ -26,8 +26,14 @@ Required keys:
 
 Supabase Auth Google OAuth redirect URLs:
 
-- Local: `http://localhost:3000/auth/callback`
-- Vercel Preview / Production: `https://<domain>/auth/callback`
+- Site URL: the official deployed URL, not `http://localhost:3000`
+- Local redirect URL: `http://localhost:3000/**`
+- Vercel production redirect URL: `https://<production-domain>/**`
+- Vercel preview redirect URL: `https://*-<team-or-account-slug>.vercel.app/**`
+
+For this project, the Vercel preview wildcard should include:
+
+- `https://*-subarugits-projects.vercel.app/**`
 
 ## Notes
 
