@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "アレンジルート｜ダーツの上がり方をルートで探せる",
+  title: "Arrange Route｜ダーツの上がり方をルートで探せる",
   description: "ダーツのアレンジを投稿・投票で探せるルート集",
 };
 
@@ -24,8 +24,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               priority
             />
             <span>
-              <strong>アレンジルート</strong>
-              <small>Arrange Route</small>
+              <strong>Arrange Route</strong>
+              <small>投稿・投票で探せるルート集</small>
             </span>
           </Link>
           <AuthStatus />
