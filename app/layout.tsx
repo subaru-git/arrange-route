@@ -5,8 +5,8 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 export const metadata = {
-  title: "Arrange Wiki｜ダーツのアレンジ辞典",
-  description: "ダーツの上がり方をツリーで探せるアレンジ辞典",
+  title: "アレンジルート｜ダーツの上がり方をルートで探せる",
+  description: "ダーツのアレンジを投稿・投票で探せるルート集",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -17,15 +17,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Link href="/scores" className="app-header-title">
             <Image
               className="app-header-mark"
-              src="/arrange-wiki-icon.png"
+              src="/arrange-route-icon.png"
               alt=""
               width={40}
               height={40}
               priority
             />
             <span>
-              <strong>Arrange Wiki</strong>
-              <small>ダーツのアレンジ辞典</small>
+              <strong>アレンジルート</strong>
+              <small>Arrange Route</small>
             </span>
           </Link>
           <AuthStatus />

@@ -20,16 +20,16 @@ type ProfileSummary = {
 const demoNow = new Date().toISOString();
 
 declare global {
-  var __arrangeWikiDemoVotes: Map<string, "up" | "down"> | undefined;
-  var __arrangeWikiDemoBookmarks: Set<string> | undefined;
+  var __arrangeRouteDemoVotes: Map<string, "up" | "down"> | undefined;
+  var __arrangeRouteDemoBookmarks: Set<string> | undefined;
 }
 
 const demoVotes =
-  globalThis.__arrangeWikiDemoVotes ??
-  (globalThis.__arrangeWikiDemoVotes = new Map<string, "up" | "down">());
+  globalThis.__arrangeRouteDemoVotes ??
+  (globalThis.__arrangeRouteDemoVotes = new Map<string, "up" | "down">());
 const demoBookmarks =
-  globalThis.__arrangeWikiDemoBookmarks ??
-  (globalThis.__arrangeWikiDemoBookmarks = new Set<string>());
+  globalThis.__arrangeRouteDemoBookmarks ??
+  (globalThis.__arrangeRouteDemoBookmarks = new Set<string>());
 
 const useDemoData = process.env.NODE_ENV === "development" && !hasSupabase;
 

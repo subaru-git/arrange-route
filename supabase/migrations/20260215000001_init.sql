@@ -1,4 +1,4 @@
--- Arrange Wiki MVP initial schema
+-- Arrange Route MVP initial schema
 
 create extension if not exists pgcrypto;
 
