@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createPostAction, editPostAction } from "@/app/actions/post-actions";
 import { RouteDiagram } from "@/components/route-diagram";
@@ -12,6 +12,7 @@ import {
   getPathNodeIds,
   getRemainingScoreAtNode,
   getThrowsUsedAtNode,
+  normalizeRouteTree,
   removeSelectedSubtree,
   tokenScore,
 } from "@/lib/route-tree";
@@ -26,9 +27,53 @@ const multiplierOptions: Array<{ value: Multiplier; label: string }> = [
   { value: "D", label: "ダブル" },
   { value: "T", label: "トリプル" },
 ];
+const newPostDraftKey = "arrange-route:new-post-draft:v1";
+const newPostDraftMaxAgeMs = 30 * 60 * 1000;
+
+type NewPostDraft = {
+  savedAt: number;
+  remainingScore: number;
+  remainingScoreInput: string;
+  dartsLeft: number;
+  outRule: OutRule;
+  bullMode: BullMode;
+  routeTree: RouteTree;
+  selectedNodeId: string;
+  comment: string;
+};
 
 function numericOnly(value: string) {
   return value.replace(/\D/g, "");
+}
+
+function isOutRule(value: unknown): value is OutRule {
+  return value === "double_out" || value === "master_out" || value === "single_out";
+}
+
+function isBullMode(value: unknown): value is BullMode {
+  return value === "separate" || value === "fat";
+}
+
+function isRouteTree(value: unknown): value is RouteTree {
+  if (!value || typeof value !== "object") return false;
+  const tree = value as Partial<RouteTree>;
+  return typeof tree.targetNodeId === "string" && Array.isArray(tree.nodes) && Array.isArray(tree.edges);
+}
+
+function isNewPostDraft(value: unknown): value is NewPostDraft {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as Partial<NewPostDraft>;
+  return (
+    typeof draft.savedAt === "number" &&
+    Number.isFinite(draft.remainingScore) &&
+    typeof draft.remainingScoreInput === "string" &&
+    Number.isInteger(draft.dartsLeft) &&
+    isOutRule(draft.outRule) &&
+    isBullMode(draft.bullMode) &&
+    isRouteTree(draft.routeTree) &&
+    typeof draft.selectedNodeId === "string" &&
+    typeof draft.comment === "string"
+  );
 }
 
 function SaveSubmitButton({ canSubmit, label }: { canSubmit: boolean; label: string }) {
@@ -44,6 +89,7 @@ function SaveSubmitButton({ canSubmit, label }: { canSubmit: boolean; label: str
 interface NewPostFormProps {
   mode?: "create" | "edit";
   postId?: string;
+  canSave?: boolean;
   initialRemainingScore?: number;
   originalRemainingScore?: number;
   initialDartsLeft?: number;
@@ -55,6 +101,7 @@ interface NewPostFormProps {
 export function NewPostForm({
   mode = "create",
   postId,
+  canSave = true,
   initialRemainingScore = 70,
   originalRemainingScore = initialRemainingScore,
   initialDartsLeft = 3,
@@ -70,6 +117,69 @@ export function NewPostForm({
   const [multiplier, setMultiplier] = useState<Multiplier>("T");
   const [tree, setTree] = useState<RouteTree>(() => initialRouteTree ?? createInitialRouteTree());
   const [selectedNodeId, setSelectedNodeId] = useState<string>("target");
+  const [comment, setComment] = useState("");
+  const [draftLoaded, setDraftLoaded] = useState(mode !== "create");
+
+  useEffect(() => {
+    if (mode !== "create") return;
+
+    try {
+      const raw = window.localStorage.getItem(newPostDraftKey);
+      if (!raw) {
+        setDraftLoaded(true);
+        return;
+      }
+
+      const draft = JSON.parse(raw) as unknown;
+      if (!isNewPostDraft(draft) || Date.now() - draft.savedAt > newPostDraftMaxAgeMs) {
+        window.localStorage.removeItem(newPostDraftKey);
+        setDraftLoaded(true);
+        return;
+      }
+
+      setRemainingScore(Math.max(1, Math.min(701, Math.trunc(draft.remainingScore))));
+      setRemainingScoreInput(draft.remainingScoreInput);
+      setDartsLeft(Math.max(1, Math.min(3, draft.dartsLeft)));
+      setOutRule(draft.outRule);
+      setBullMode(draft.bullMode);
+      setTree(normalizeRouteTree(draft.routeTree));
+      setSelectedNodeId(draft.selectedNodeId);
+      setComment(draft.comment);
+    } catch {
+      window.localStorage.removeItem(newPostDraftKey);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "create" || !draftLoaded) return;
+
+    const draft: NewPostDraft = {
+      savedAt: Date.now(),
+      remainingScore,
+      remainingScoreInput,
+      dartsLeft,
+      outRule,
+      bullMode,
+      routeTree: tree,
+      selectedNodeId,
+      comment,
+    };
+
+    window.localStorage.setItem(newPostDraftKey, JSON.stringify(draft));
+  }, [
+    mode,
+    draftLoaded,
+    remainingScore,
+    remainingScoreInput,
+    dartsLeft,
+    outRule,
+    bullMode,
+    tree,
+    selectedNodeId,
+    comment,
+  ]);
 
   const bullButtons = useMemo(() => {
     if (bullMode === "fat") return [{ label: "BULL", token: "BULL" }];
@@ -150,12 +260,15 @@ export function NewPostForm({
     const remaining = getRemainingScoreAtNode(tree, remainingScore, node.id);
     return remaining < 0;
   });
-  const canSubmit = nodeCount > 0 && !hasBustedLeaves;
+  const routeCanSubmit = nodeCount > 0 && !hasBustedLeaves;
+  const canSubmit = routeCanSubmit && canSave;
   const saveMessage =
     nodeCount === 0
       ? "ターゲットを1つ以上追加してください。"
       : hasBustedLeaves
         ? "バーストしたルートを削除してください。"
+        : !canSave
+          ? "ログインすると保存できます。"
         : "保存できます。";
 
   let guardMessage = "";
@@ -172,9 +285,14 @@ export function NewPostForm({
   const isEditMode = mode === "edit";
   const formAction = isEditMode ? editPostAction : createPostAction;
   const submitLabel = isEditMode ? "変更を保存" : "このアレンジを保存";
+  const handleSubmit = () => {
+    if (!isEditMode && canSubmit) {
+      window.localStorage.removeItem(newPostDraftKey);
+    }
+  };
 
   return (
-    <form action={formAction} className="new-form">
+    <form action={formAction} className="new-form" onSubmit={handleSubmit}>
       {isEditMode ? (
         <>
           <input type="hidden" name="post_id" value={postId ?? ""} />
@@ -369,7 +487,7 @@ export function NewPostForm({
       {!isEditMode ? (
         <details className="new-form-note">
           <summary>メモを追加（任意）</summary>
-          <textarea name="comment" rows={2} />
+          <textarea name="comment" rows={2} value={comment} onChange={(e) => setComment(e.target.value)} />
         </details>
       ) : null}
 

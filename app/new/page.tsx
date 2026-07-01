@@ -3,7 +3,6 @@ import { NewPostForm } from "@/components/new-post-form";
 import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { BullMode, OutRule } from "@/lib/types/domain";
-import Link from "next/link";
 
 interface PageProps {
   searchParams: {
@@ -43,6 +42,7 @@ function buildNextPath(searchParams: PageProps["searchParams"]) {
 function getAuthErrorMessage(value?: string) {
   if (value === "missing_config") return "Supabaseの認証設定が未設定です。";
   if (value === "oauth") return "Googleログインを開始できませんでした。";
+  if (value === "login_required") return "投稿するにはGoogleログインが必要です。";
   return null;
 }
 
@@ -55,20 +55,18 @@ export default async function NewPage({ searchParams }: PageProps) {
     isSignedIn = Boolean(data.user);
   }
 
-  if (!isSignedIn) {
-    const errorMessage = getAuthErrorMessage(searchParams.auth_error);
+  const errorMessage = getAuthErrorMessage(searchParams.auth_error);
 
-    return (
-      <section className="new-post-page">
+  return (
+    <section className="new-post-page">
+      <header>
+        <p className="page-eyebrow">ルートを共有</p>
+        <h1>新しいアレンジ</h1>
+      </header>
+      {!isSignedIn ? (
         <div className="login-required-panel">
           <div className="login-required-copy">
-            <p className="page-eyebrow">ルートを共有</p>
-            <h1>ログインして投稿</h1>
-            <p>
-              あなたのアレンジをぜひ登録してください。
-              <br />
-              投稿の信頼性を保つため、Googleログインをお願いしています。
-            </p>
+            <p>投稿として保存、公開するにはGoogleログインが必要です。</p>
           </div>
           {errorMessage ? <p className="auth-error-message">{errorMessage}</p> : null}
           <div className="login-required-actions">
@@ -78,22 +76,13 @@ export default async function NewPage({ searchParams }: PageProps) {
                 Googleでログイン
               </button>
             </form>
-            <Link href="/scores" className="login-secondary-link">
-              スコア一覧へ
-            </Link>
           </div>
         </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="new-post-page">
-      <header>
-        <p className="page-eyebrow">ルートを共有</p>
-        <h1>新しいアレンジ</h1>
-      </header>
+      ) : errorMessage ? (
+        <p className="auth-error-message">{errorMessage}</p>
+      ) : null}
       <NewPostForm
+        canSave={isSignedIn}
         initialRemainingScore={normalizeScore(searchParams.remaining_score)}
         initialOutRule={normalizeOutRule(searchParams.out_rule)}
         initialBullMode={normalizeBullMode(searchParams.bull_mode)}
