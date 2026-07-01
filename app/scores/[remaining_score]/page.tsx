@@ -57,7 +57,7 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
   const viewerUserId = supabase ? (await supabase.auth.getUser()).data.user?.id : undefined;
   await recordScoreView(remainingScore, supabase);
   const posts = await listPosts(
-    { remainingScore, outRule, bullMode, sort: "latest" },
+    { remainingScore, outRule, bullMode },
     browserId,
     viewerUserId,
     supabase

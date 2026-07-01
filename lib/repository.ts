@@ -456,7 +456,7 @@ function sortPosts(items: PostCardItem[], sort: SortMode) {
     return [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
   return [...items].sort((a, b) => {
-    if (b.voteScore !== a.voteScore) return b.voteScore - a.voteScore;
+    if (b.upCount !== a.upCount) return b.upCount - a.upCount;
     return b.createdAt.localeCompare(a.createdAt);
   });
 }
