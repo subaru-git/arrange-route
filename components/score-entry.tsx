@@ -105,7 +105,7 @@ export function ScoreEntry({ commonScores }: { commonScores: number[] }) {
           ))}
         </div>
         <p className="score-entry-secondary">
-          アレンジを知っていますか？ <Link href={newPostHref}>Wikiに追加する</Link>
+          アレンジを知っていますか？ <Link href={newPostHref}>ルートを投稿する</Link>
         </p>
       </section>
     </div>
