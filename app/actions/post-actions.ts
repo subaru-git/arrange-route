@@ -48,6 +48,7 @@ function buildNewPostRedirect(input: {
   remainingScore: number;
   outRule: OutRule;
   bullMode: BullMode;
+  authError?: string;
 }) {
   const params = new URLSearchParams();
   if (Number.isFinite(input.remainingScore)) {
@@ -55,6 +56,7 @@ function buildNewPostRedirect(input: {
   }
   params.set("out_rule", input.outRule);
   params.set("bull_mode", input.bullMode);
+  if (input.authError) params.set("auth_error", input.authError);
   return `/new?${params.toString()}`;
 }
 
@@ -76,6 +78,12 @@ export async function createPostAction(formData: FormData) {
   }
   const routeTree: RouteTree = normalizeRouteTree(parsed);
   const redirectPath = buildNewPostRedirect({ remainingScore, outRule, bullMode });
+  const loginRequiredRedirectPath = buildNewPostRedirect({
+    remainingScore,
+    outRule,
+    bullMode,
+    authError: "login_required",
+  });
 
   if (!hasSupabaseAuthConfig) {
     redirect(redirectPath);
@@ -84,7 +92,7 @@ export async function createPostAction(formData: FormData) {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
-    redirect(redirectPath);
+    redirect(loginRequiredRedirectPath);
   }
 
   await createPost({
