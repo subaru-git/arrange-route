@@ -32,6 +32,7 @@ const demoBookmarks =
   (globalThis.__arrangeRouteDemoBookmarks = new Set<string>());
 
 const useDemoData = process.env.NODE_ENV === "development" && !hasSupabase;
+const fallbackCommonScores = [121, 72, 61, 70, 100];
 
 const demoPosts: PostCardItem[] = [
   {
@@ -458,6 +459,47 @@ function sortPosts(items: PostCardItem[], sort: SortMode) {
     if (b.voteScore !== a.voteScore) return b.voteScore - a.voteScore;
     return b.createdAt.localeCompare(a.createdAt);
   });
+}
+
+export async function listCommonScores(limit = 5): Promise<number[]> {
+  if (useDemoData) return fallbackCommonScores.slice(0, limit);
+  if (!hasSupabase) return fallbackCommonScores.slice(0, limit);
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("score_views")
+    .select("remaining_score")
+    .order("view_count", { ascending: false })
+    .order("remaining_score", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.error("Failed to load common scores", error);
+    return fallbackCommonScores.slice(0, limit);
+  }
+
+  const scores = (data ?? []).map((row) => row.remaining_score);
+  if (scores.length >= limit) return scores;
+
+  return [...scores, ...fallbackCommonScores.filter((score) => !scores.includes(score))].slice(
+    0,
+    limit
+  );
+}
+
+export async function recordScoreView(
+  remainingScore: number,
+  supabaseClient?: SupabaseClient
+): Promise<void> {
+  if (!Number.isInteger(remainingScore) || remainingScore < 1 || remainingScore > 701) return;
+  if (useDemoData || !hasSupabase) return;
+
+  const supabase = supabaseClient ?? getSupabaseClient();
+  const { error } = await supabase.rpc("increment_score_view", { score: remainingScore });
+
+  if (error) {
+    console.error("Failed to record score view", error);
+  }
 }
 
 export async function listPosts(

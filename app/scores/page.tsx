@@ -1,8 +1,11 @@
 import { ScoreEntry } from "@/components/score-entry";
+import { listCommonScores } from "@/lib/repository";
 
-const commonScores = [121, 72, 61];
+export const dynamic = "force-dynamic";
 
-export default function ScoresIndexPage() {
+export default async function ScoresIndexPage() {
+  const commonScores = await listCommonScores();
+
   return (
     <section className="scores-entry-page">
       <div className="scores-entry-main">

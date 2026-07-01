@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { ModePicker } from "@/components/mode-picker";
 import { PostCard } from "@/components/post-card";
 import { ScorePicker } from "@/components/score-picker";
-import { listPosts } from "@/lib/repository";
+import { listPosts, recordScoreView } from "@/lib/repository";
 import { hasSupabaseAuthConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { BullMode, OutRule } from "@/lib/types/domain";
@@ -55,6 +55,7 @@ export default async function ScorePage({ params, searchParams }: PageProps) {
   const browserId = cookies().get(BROWSER_ID_COOKIE)?.value;
   const supabase = hasSupabaseAuthConfig ? createServerSupabaseClient() : undefined;
   const viewerUserId = supabase ? (await supabase.auth.getUser()).data.user?.id : undefined;
+  await recordScoreView(remainingScore, supabase);
   const posts = await listPosts(
     { remainingScore, outRule, bullMode, sort: "latest" },
     browserId,
