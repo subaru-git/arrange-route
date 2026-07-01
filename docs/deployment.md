@@ -26,9 +26,9 @@ Required keys:
 
 Supabase Auth Google OAuth redirect URLs:
 
-- Site URL: the official deployed URL, not `http://localhost:3000`
+- Site URL: `https://arrange-route.app`
 - Local redirect URL: `http://localhost:3000/**`
-- Vercel production redirect URL: `https://<production-domain>/**`
+- Production redirect URL: `https://arrange-route.app/**`
 - Vercel preview redirect URL: `https://*-<team-or-account-slug>.vercel.app/**`
 
 For this project, the Vercel preview wildcard should include:
