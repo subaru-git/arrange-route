@@ -256,6 +256,7 @@ export function NewPostForm({
   const finishTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
     const start = targetPointerStart.current;
     targetPointerStart.current = null;
+    event.currentTarget.blur();
 
     if (!start || start.number !== number) {
       addNumberToken("S", number);
