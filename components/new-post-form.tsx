@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createPostAction, editPostAction } from "@/app/actions/post-actions";
 import { RouteDiagram } from "@/components/route-diagram";
@@ -22,10 +22,15 @@ type Multiplier = "S" | "D" | "T";
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
 const dartsLeftOptions = [1, 2, 3];
+const multiplierLabels: Record<Multiplier, string> = {
+  S: "シングル",
+  D: "ダブル",
+  T: "トリプル",
+};
 const multiplierOptions: Array<{ value: Multiplier; label: string }> = [
-  { value: "S", label: "シングル" },
-  { value: "D", label: "ダブル" },
-  { value: "T", label: "トリプル" },
+  { value: "S", label: multiplierLabels.S },
+  { value: "D", label: multiplierLabels.D },
+  { value: "T", label: multiplierLabels.T },
 ];
 const newPostDraftKey = "arrange-route:new-post-draft:v1";
 const newPostDraftMaxAgeMs = 30 * 60 * 1000;
@@ -119,6 +124,10 @@ export function NewPostForm({
   const [selectedNodeId, setSelectedNodeId] = useState<string>("target");
   const [comment, setComment] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(mode !== "create");
+  const targetPointerStart = useRef<{ x: number; y: number; number: number } | null>(null);
+  const [flickPreview, setFlickPreview] = useState<{ number: number; multiplier: Multiplier } | null>(
+    null
+  );
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -224,6 +233,52 @@ export function NewPostForm({
     const next = addTokenToSelectedNode(tree, sourceNodeId, token);
     setTree(next.tree);
     setSelectedNodeId(next.selectedNodeId);
+  };
+
+  const addNumberToken = (nextMultiplier: Multiplier, number: number) => {
+    addToken(`${nextMultiplier}${number}`);
+  };
+
+  const multiplierFromFlick = (
+    start: { x: number; y: number },
+    end: { x: number; y: number }
+  ): Multiplier | null => {
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (distance < 24) return "S";
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return null;
+    return deltaX > 0 ? "T" : "D";
+  };
+
+  const startTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
+    targetPointerStart.current = { x: event.clientX, y: event.clientY, number };
+    setFlickPreview({ number, multiplier: "S" });
+  };
+
+  const previewTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
+    const start = targetPointerStart.current;
+    if (!start || start.number !== number) return;
+
+    const nextMultiplier = multiplierFromFlick(start, { x: event.clientX, y: event.clientY });
+    setFlickPreview(nextMultiplier ? { number, multiplier: nextMultiplier } : null);
+  };
+
+  const finishTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
+    const start = targetPointerStart.current;
+    targetPointerStart.current = null;
+    setFlickPreview(null);
+    event.currentTarget.blur();
+
+    if (!start || start.number !== number) {
+      addNumberToken("S", number);
+      return;
+    }
+
+    const nextMultiplier = multiplierFromFlick(start, { x: event.clientX, y: event.clientY });
+    if (!nextMultiplier) return;
+    addNumberToken(nextMultiplier, number);
   };
   const childNodeIds = useMemo(() => new Set(tree.edges.map((edge) => edge.from)), [tree.edges]);
   const leafNodes = useMemo(
@@ -384,7 +439,7 @@ export function NewPostForm({
         />
 
         <div className="builder-tools">
-          <div className="target-toolbar">
+          <div className="target-toolbar desktop-target-tools">
             <span>追加するターゲット</span>
             <div className="multiplier-segment">
               {multiplierOptions.map((option) => (
@@ -400,7 +455,7 @@ export function NewPostForm({
             </div>
           </div>
 
-          <div className="token-grid">
+          <div className="token-grid desktop-token-grid">
             {numbers.map((n) => (
               <button
                 key={n}
@@ -410,6 +465,71 @@ export function NewPostForm({
               >
                 {multiplier}
                 {n}
+              </button>
+            ))}
+          </div>
+
+          <div className="target-toolbar mobile-target-tools">
+            <span>追加するターゲット</span>
+            <strong>タップ S / 左 D / 右 T</strong>
+          </div>
+
+          <div className="token-grid mobile-token-grid">
+            {numbers.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className="flick-token"
+                aria-label={`${n} ${multiplierLabels.S}、左フリックで${multiplierLabels.D}、右フリックで${multiplierLabels.T}`}
+                onPointerDown={(event) => startTargetFlick(event, n)}
+                onPointerMove={(event) => previewTargetFlick(event, n)}
+                onPointerUp={(event) => finishTargetFlick(event, n)}
+                onPointerCancel={() => {
+                  targetPointerStart.current = null;
+                  setFlickPreview(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    addNumberToken("S", n);
+                  }
+                }}
+                disabled={!canAddToken}
+              >
+                <span
+                  className={
+                    flickPreview?.number === n && flickPreview.multiplier === "D"
+                      ? "flick-token-left active"
+                      : "flick-token-left"
+                  }
+                >
+                  D
+                </span>
+                <span className="flick-token-main">{n}</span>
+                <span
+                  className={
+                    flickPreview?.number === n && flickPreview.multiplier === "T"
+                      ? "flick-token-right active"
+                      : "flick-token-right"
+                  }
+                >
+                  T
+                </span>
+                <span
+                  className={
+                    flickPreview?.number === n && flickPreview.multiplier === "S"
+                      ? "flick-token-bottom active"
+                      : "flick-token-bottom"
+                  }
+                >
+                  S
+                </span>
+                {flickPreview?.number === n ? (
+                  <span className={`flick-token-preview ${flickPreview.multiplier}`}>
+                    {flickPreview.multiplier}
+                    {n}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
