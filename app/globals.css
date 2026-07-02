@@ -2132,6 +2132,13 @@ button {
   opacity: 0.72;
 }
 
+.flick-token-left.active,
+.flick-token-right.active,
+.flick-token-bottom.active {
+  color: var(--color-accent);
+  opacity: 1;
+}
+
 .flick-token-left {
   top: 50%;
   left: 7px;
@@ -2148,6 +2155,42 @@ button {
   bottom: 7px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.flick-token-preview {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 30px;
+  border: 1px solid rgb(8 127 109 / 22%);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgb(8 127 109 / 16%);
+  color: var(--color-accent);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.flick-token-preview.S {
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.flick-token-preview.D {
+  top: 50%;
+  left: -26px;
+  transform: translateY(-50%);
+}
+
+.flick-token-preview.T {
+  top: 50%;
+  right: -26px;
+  transform: translateY(-50%);
 }
 
 .bull-targets {

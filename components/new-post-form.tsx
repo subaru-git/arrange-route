@@ -125,6 +125,9 @@ export function NewPostForm({
   const [comment, setComment] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(mode !== "create");
   const targetPointerStart = useRef<{ x: number; y: number; number: number } | null>(null);
+  const [flickPreview, setFlickPreview] = useState<{ number: number; multiplier: Multiplier } | null>(
+    null
+  );
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -251,11 +254,21 @@ export function NewPostForm({
 
   const startTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
     targetPointerStart.current = { x: event.clientX, y: event.clientY, number };
+    setFlickPreview({ number, multiplier: "S" });
+  };
+
+  const previewTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
+    const start = targetPointerStart.current;
+    if (!start || start.number !== number) return;
+
+    const nextMultiplier = multiplierFromFlick(start, { x: event.clientX, y: event.clientY });
+    setFlickPreview(nextMultiplier ? { number, multiplier: nextMultiplier } : null);
   };
 
   const finishTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
     const start = targetPointerStart.current;
     targetPointerStart.current = null;
+    setFlickPreview(null);
     event.currentTarget.blur();
 
     if (!start || start.number !== number) {
@@ -469,9 +482,11 @@ export function NewPostForm({
                 className="flick-token"
                 aria-label={`${n} ${multiplierLabels.S}、左フリックで${multiplierLabels.D}、右フリックで${multiplierLabels.T}`}
                 onPointerDown={(event) => startTargetFlick(event, n)}
+                onPointerMove={(event) => previewTargetFlick(event, n)}
                 onPointerUp={(event) => finishTargetFlick(event, n)}
                 onPointerCancel={() => {
                   targetPointerStart.current = null;
+                  setFlickPreview(null);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
@@ -481,10 +496,40 @@ export function NewPostForm({
                 }}
                 disabled={!canAddToken}
               >
-                <span className="flick-token-left">D</span>
+                <span
+                  className={
+                    flickPreview?.number === n && flickPreview.multiplier === "D"
+                      ? "flick-token-left active"
+                      : "flick-token-left"
+                  }
+                >
+                  D
+                </span>
                 <span className="flick-token-main">{n}</span>
-                <span className="flick-token-right">T</span>
-                <span className="flick-token-bottom">S</span>
+                <span
+                  className={
+                    flickPreview?.number === n && flickPreview.multiplier === "T"
+                      ? "flick-token-right active"
+                      : "flick-token-right"
+                  }
+                >
+                  T
+                </span>
+                <span
+                  className={
+                    flickPreview?.number === n && flickPreview.multiplier === "S"
+                      ? "flick-token-bottom active"
+                      : "flick-token-bottom"
+                  }
+                >
+                  S
+                </span>
+                {flickPreview?.number === n ? (
+                  <span className={`flick-token-preview ${flickPreview.multiplier}`}>
+                    {flickPreview.multiplier}
+                    {n}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
