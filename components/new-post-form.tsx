@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createPostAction, editPostAction } from "@/app/actions/post-actions";
 import { RouteDiagram } from "@/components/route-diagram";
@@ -22,10 +22,15 @@ type Multiplier = "S" | "D" | "T";
 
 const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
 const dartsLeftOptions = [1, 2, 3];
+const multiplierLabels: Record<Multiplier, string> = {
+  S: "シングル",
+  D: "ダブル",
+  T: "トリプル",
+};
 const multiplierOptions: Array<{ value: Multiplier; label: string }> = [
-  { value: "S", label: "シングル" },
-  { value: "D", label: "ダブル" },
-  { value: "T", label: "トリプル" },
+  { value: "S", label: multiplierLabels.S },
+  { value: "D", label: multiplierLabels.D },
+  { value: "T", label: multiplierLabels.T },
 ];
 const newPostDraftKey = "arrange-route:new-post-draft:v1";
 const newPostDraftMaxAgeMs = 30 * 60 * 1000;
@@ -119,6 +124,7 @@ export function NewPostForm({
   const [selectedNodeId, setSelectedNodeId] = useState<string>("target");
   const [comment, setComment] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(mode !== "create");
+  const targetPointerStart = useRef<{ x: number; y: number; number: number } | null>(null);
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -224,6 +230,40 @@ export function NewPostForm({
     const next = addTokenToSelectedNode(tree, sourceNodeId, token);
     setTree(next.tree);
     setSelectedNodeId(next.selectedNodeId);
+  };
+
+  const addNumberToken = (nextMultiplier: Multiplier, number: number) => {
+    addToken(`${nextMultiplier}${number}`);
+  };
+
+  const multiplierFromFlick = (
+    start: { x: number; y: number },
+    end: { x: number; y: number }
+  ): Multiplier => {
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (distance < 24) return "S";
+    if (Math.abs(deltaY) >= Math.abs(deltaX)) return deltaY < 0 ? "D" : "S";
+    return deltaX > 0 ? "T" : "D";
+  };
+
+  const startTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
+    targetPointerStart.current = { x: event.clientX, y: event.clientY, number };
+  };
+
+  const finishTargetFlick = (event: PointerEvent<HTMLButtonElement>, number: number) => {
+    const start = targetPointerStart.current;
+    targetPointerStart.current = null;
+
+    if (!start || start.number !== number) {
+      addNumberToken("S", number);
+      return;
+    }
+
+    const nextMultiplier = multiplierFromFlick(start, { x: event.clientX, y: event.clientY });
+    addNumberToken(nextMultiplier, number);
   };
   const childNodeIds = useMemo(() => new Set(tree.edges.map((edge) => edge.from)), [tree.edges]);
   const leafNodes = useMemo(
@@ -384,7 +424,7 @@ export function NewPostForm({
         />
 
         <div className="builder-tools">
-          <div className="target-toolbar">
+          <div className="target-toolbar desktop-target-tools">
             <span>追加するターゲット</span>
             <div className="multiplier-segment">
               {multiplierOptions.map((option) => (
@@ -400,7 +440,7 @@ export function NewPostForm({
             </div>
           </div>
 
-          <div className="token-grid">
+          <div className="token-grid desktop-token-grid">
             {numbers.map((n) => (
               <button
                 key={n}
@@ -410,6 +450,39 @@ export function NewPostForm({
               >
                 {multiplier}
                 {n}
+              </button>
+            ))}
+          </div>
+
+          <div className="target-toolbar mobile-target-tools">
+            <span>追加するターゲット</span>
+            <strong>タップ S / 上 D / 右 T</strong>
+          </div>
+
+          <div className="token-grid mobile-token-grid">
+            {numbers.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className="flick-token"
+                aria-label={`${n} ${multiplierLabels.S}、上フリックで${multiplierLabels.D}、右フリックで${multiplierLabels.T}`}
+                onPointerDown={(event) => startTargetFlick(event, n)}
+                onPointerUp={(event) => finishTargetFlick(event, n)}
+                onPointerCancel={() => {
+                  targetPointerStart.current = null;
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    addNumberToken("S", n);
+                  }
+                }}
+                disabled={!canAddToken}
+              >
+                <span className="flick-token-top">D</span>
+                <span className="flick-token-main">{n}</span>
+                <span className="flick-token-right">T</span>
+                <span className="flick-token-bottom">S</span>
               </button>
             ))}
           </div>

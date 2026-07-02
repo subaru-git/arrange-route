@@ -1996,6 +1996,17 @@ button {
   font-weight: 700;
 }
 
+.target-toolbar strong {
+  justify-self: end;
+  color: var(--color-text-primary);
+  font-size: 11px;
+}
+
+.mobile-target-tools,
+.mobile-token-grid {
+  display: none;
+}
+
 .multiplier-segment {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2034,6 +2045,10 @@ button {
   gap: 5px;
 }
 
+.token-grid.mobile-token-grid {
+  display: none;
+}
+
 .builder-tools button {
   border: 1px solid rgb(83 112 108 / 16%);
   background: #ffffff;
@@ -2049,7 +2064,7 @@ button {
   font-size: 12px;
 }
 
-.token-grid button {
+.desktop-token-grid button {
   aspect-ratio: auto;
   min-height: 34px;
   border-radius: 10px;
@@ -2059,11 +2074,62 @@ button {
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.token-grid button:hover,
+.mobile-token-grid .flick-token {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 58px;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0;
+  touch-action: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  user-select: none;
+}
+
+.desktop-token-grid button:hover,
+.mobile-token-grid .flick-token:hover,
 .bull-targets button:hover {
   border-color: rgb(8 127 109 / 42%);
   background: var(--color-accent-soft);
   transform: translateY(-1px);
+}
+
+.flick-token-main {
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.flick-token-top,
+.flick-token-right,
+.flick-token-bottom {
+  position: absolute;
+  color: var(--color-text-secondary);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.72;
+}
+
+.flick-token-top {
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.flick-token-right {
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+}
+
+.flick-token-bottom {
+  bottom: 7px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .bull-targets {
@@ -2289,6 +2355,19 @@ button {
 
   .tree-builder-head span {
     display: none;
+  }
+
+  .desktop-target-tools,
+  .desktop-token-grid {
+    display: none;
+  }
+
+  .mobile-target-tools {
+    display: grid;
+  }
+
+  .token-grid.mobile-token-grid {
+    display: grid;
   }
 
   .token-grid {
