@@ -2083,7 +2083,7 @@ button {
   border-radius: 10px;
   background: #ffffff;
   padding: 0;
-  touch-action: none;
+  touch-action: pan-y;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
   user-select: none;
 }
@@ -2103,7 +2103,7 @@ button {
   line-height: 1;
 }
 
-.flick-token-top,
+.flick-token-left,
 .flick-token-right,
 .flick-token-bottom {
   position: absolute;
@@ -2114,10 +2114,10 @@ button {
   opacity: 0.72;
 }
 
-.flick-token-top {
-  top: 7px;
-  left: 50%;
-  transform: translateX(-50%);
+.flick-token-left {
+  top: 50%;
+  left: 7px;
+  transform: translateY(-50%);
 }
 
 .flick-token-right {

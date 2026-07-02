@@ -239,13 +239,13 @@ export function NewPostForm({
   const multiplierFromFlick = (
     start: { x: number; y: number },
     end: { x: number; y: number }
-  ): Multiplier => {
+  ): Multiplier | null => {
     const deltaX = end.x - start.x;
     const deltaY = end.y - start.y;
     const distance = Math.hypot(deltaX, deltaY);
 
     if (distance < 24) return "S";
-    if (Math.abs(deltaY) >= Math.abs(deltaX)) return deltaY < 0 ? "D" : "S";
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return null;
     return deltaX > 0 ? "T" : "D";
   };
 
@@ -263,6 +263,7 @@ export function NewPostForm({
     }
 
     const nextMultiplier = multiplierFromFlick(start, { x: event.clientX, y: event.clientY });
+    if (!nextMultiplier) return;
     addNumberToken(nextMultiplier, number);
   };
   const childNodeIds = useMemo(() => new Set(tree.edges.map((edge) => edge.from)), [tree.edges]);
@@ -456,7 +457,7 @@ export function NewPostForm({
 
           <div className="target-toolbar mobile-target-tools">
             <span>追加するターゲット</span>
-            <strong>タップ S / 上 D / 右 T</strong>
+            <strong>タップ S / 左 D / 右 T</strong>
           </div>
 
           <div className="token-grid mobile-token-grid">
@@ -465,7 +466,7 @@ export function NewPostForm({
                 key={n}
                 type="button"
                 className="flick-token"
-                aria-label={`${n} ${multiplierLabels.S}、上フリックで${multiplierLabels.D}、右フリックで${multiplierLabels.T}`}
+                aria-label={`${n} ${multiplierLabels.S}、左フリックで${multiplierLabels.D}、右フリックで${multiplierLabels.T}`}
                 onPointerDown={(event) => startTargetFlick(event, n)}
                 onPointerUp={(event) => finishTargetFlick(event, n)}
                 onPointerCancel={() => {
@@ -479,7 +480,7 @@ export function NewPostForm({
                 }}
                 disabled={!canAddToken}
               >
-                <span className="flick-token-top">D</span>
+                <span className="flick-token-left">D</span>
                 <span className="flick-token-main">{n}</span>
                 <span className="flick-token-right">T</span>
                 <span className="flick-token-bottom">S</span>
